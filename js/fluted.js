@@ -4,6 +4,7 @@ const host = document.getElementById("field");
 if (!host) throw new Error("Missing #field");
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const touchMotion = window.matchMedia("(hover: none), (pointer: coarse)");
 
 const video = document.createElement("video");
 video.src = new URL("../Silhouette calm background loop _40 s_.mp4", import.meta.url).href;
@@ -33,10 +34,14 @@ function resizeInk() {
 }
 
 function placeInk() {
-  document.querySelectorAll(".ink").forEach((el) => {
+  // Read all positions before writing styles to avoid layout thrashing on scroll.
+  const positions = Array.from(document.querySelectorAll(".ink"), (el) => {
     const rect = el.getBoundingClientRect();
-    el.style.setProperty("--ink-x", `${rect.left}px`);
-    el.style.setProperty("--ink-y", `${rect.top}px`);
+    return { el, x: rect.left, y: rect.top };
+  });
+  positions.forEach(({ el, x, y }) => {
+    el.style.setProperty("--ink-x", `${x}px`);
+    el.style.setProperty("--ink-y", `${y}px`);
   });
 }
 
@@ -100,7 +105,14 @@ window.addEventListener("resize", () => {
   resizeInk();
   placeInk();
 });
-window.addEventListener("scroll", placeInk, { passive: true });
+let inkScrollFrame = 0;
+window.addEventListener("scroll", () => {
+  if (inkScrollFrame) return;
+  inkScrollFrame = requestAnimationFrame(() => {
+    inkScrollFrame = 0;
+    placeInk();
+  });
+}, { passive: true });
 
 const poster = new Image();
 poster.decoding = "async";
@@ -129,15 +141,24 @@ function whenVideo() {
 
 function boot() {
   const glass = mountGlass(host, seed);
+  let lastPaint = -Infinity;
+  let lastInk = -Infinity;
 
-  const upload = () => {
+  const upload = (now) => {
     if (video.readyState < 2) return;
+    if (document.hidden || (touchMotion.matches && now - lastPaint < 1000 / 30)) return;
+    lastPaint = now;
     glass.draw(video, video.videoWidth, video.videoHeight);
-    updateInk(video, video.videoWidth, video.videoHeight);
+    // The ink mask does pixel sampling and PNG encoding; it need not run at
+    // video frame rate on touch devices while the browser is also scrolling.
+    if (!touchMotion.matches || now - lastInk >= 1000 / 15) {
+      updateInk(video, video.videoWidth, video.videoHeight);
+      lastInk = now;
+    }
   };
 
-  const paint = () => {
-    upload();
+  const paint = (now = performance.now()) => {
+    upload(now);
     if (reducedMotion) return;
     if ("requestVideoFrameCallback" in video) {
       video.requestVideoFrameCallback(paint);

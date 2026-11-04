@@ -39,6 +39,7 @@
   let pitch = 0;
   let yaw = 0;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const touchMotion = window.matchMedia("(hover: none), (pointer: coarse)");
 
   function mulberry(seed) {
     let value = seed >>> 0;
@@ -427,6 +428,10 @@
   }
 
   function tick(now) {
+    if (touchMotion.matches && now - last < 1000 / 30) {
+      frameId = window.requestAnimationFrame(tick);
+      return;
+    }
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
     last = now;
     phase += dt;
@@ -456,15 +461,15 @@
   }
 
   const card = host.closest(".card");
-  card.addEventListener("mouseenter", () => {
-    if (reduced || !frame) return;
-    hovering = true;
-    if (frameId) return;
-    last = performance.now();
-    frameId = window.requestAnimationFrame(tick);
-  });
-  card.addEventListener("mouseleave", () => {
-    hovering = false;
+  window.watchTileMotion(card, {
+    enter() {
+      if (reduced || !frame) return;
+      hovering = true;
+      if (frameId) return;
+      last = performance.now();
+      frameId = window.requestAnimationFrame(tick);
+    },
+    leave() { hovering = false; },
   });
 
   let resizeTimer = 0;

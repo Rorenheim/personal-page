@@ -373,6 +373,63 @@
   const settled = (s) => Math.abs(s.value - s.target) < 0.003 && Math.abs(s.velocity) < 0.01;
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const touchMotion = window.matchMedia("(hover: none), (pointer: coarse)");
+  const fineHover = window.matchMedia("(hover: hover) and (pointer: fine)");
+
+  // Touch scrolling never emulates a tap or consumes a gesture. Only tiles near
+  // the middle of the viewport animate; desktop keeps its normal hover behavior.
+  const tileWatchers = new Map();
+  const tileObserver = !reducedMotion && "IntersectionObserver" in window
+    ? new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const watcher = tileWatchers.get(entry.target);
+        if (watcher && touchMotion.matches) {
+          watcher.setActive(!document.hidden && entry.isIntersecting && entry.intersectionRatio >= 0.1);
+        }
+      });
+    }, { rootMargin: "-64px 0px -64px 0px", threshold: [0, 0.1] })
+    : null;
+
+  window.watchTileMotion = (trigger, callbacks) => {
+    if (!trigger || reducedMotion) return;
+    let active = false;
+    const setActive = (next, event) => {
+      if (active === next) return;
+      active = next;
+      trigger.classList.toggle("is-motion-active", active);
+      if (active) callbacks.enter(event);
+      else callbacks.leave();
+    };
+    tileWatchers.set(trigger, { setActive });
+    trigger.addEventListener("pointerenter", (event) => {
+      if (event.pointerType !== "touch" && fineHover.matches) setActive(true, event);
+    });
+    trigger.addEventListener("pointermove", (event) => {
+      if (active && event.pointerType !== "touch" && fineHover.matches) callbacks.move?.(event);
+    }, { passive: true });
+    const leavePointer = (event) => {
+      if (event.pointerType !== "touch" && fineHover.matches) setActive(false);
+    };
+    trigger.addEventListener("pointerleave", leavePointer);
+    trigger.addEventListener("pointercancel", leavePointer);
+    trigger.addEventListener("focus", () => {
+      if (trigger.matches(":focus-visible")) setActive(true);
+    });
+    trigger.addEventListener("blur", () => {
+      if (!touchMotion.matches) setActive(false);
+    });
+    if (touchMotion.matches) tileObserver?.observe(trigger);
+  };
+
+  function refreshTileObservers() {
+    tileObserver?.disconnect();
+    tileWatchers.forEach((watcher, trigger) => {
+      watcher.setActive(false);
+      if (touchMotion.matches && !document.hidden) tileObserver?.observe(trigger);
+    });
+  }
+  touchMotion.addEventListener("change", refreshTileObservers);
+  document.addEventListener("visibilitychange", refreshTileObservers);
 
   // Runs a glyph's springs while it is hovered or still settling. `state.nx` and
   // `state.ny` are the pointer's offset from the glyph's center, from -1 to 1.
@@ -386,6 +443,10 @@
     let last = 0;
 
     function step(now) {
+      if (touchMotion.matches && now - last < 1000 / 30) {
+        frameId = window.requestAnimationFrame(step);
+        return;
+      }
       const dt = Math.min(0.032, (now - last) / 1000 || 0.016);
       last = now;
       state.time += dt;
@@ -417,18 +478,19 @@
       frameId = window.requestAnimationFrame(step);
     }
 
-    trigger.addEventListener("pointerenter", (event) => {
-      state.hovering = true;
-      point(event);
-      if (motion.enter) motion.enter(state);
-      wake();
-    });
-    trigger.addEventListener("pointermove", (event) => {
-      if (state.hovering) point(event);
-    });
-    trigger.addEventListener("pointerleave", () => {
-      state.hovering = false;
-      wake();
+    window.watchTileMotion(trigger, {
+      enter(event) {
+        state.hovering = true;
+        if (event) point(event);
+        else { state.nx = 0; state.ny = 0; }
+        if (motion.enter) motion.enter(state);
+        wake();
+      },
+      move: point,
+      leave() {
+        state.hovering = false;
+        wake();
+      },
     });
   }
 
@@ -615,6 +677,8 @@
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const yearEl = document.getElementById("year");
   const nowEl = document.getElementById("now");
+  const compactClock = window.matchMedia("(max-width: 600px)");
+  let clockTimer = 0;
 
   function paint(el, text) {
     const rim = el.querySelector(".ink-rim");
@@ -624,16 +688,22 @@
   }
 
   function tick() {
+    window.clearTimeout(clockTimer);
     const date = new Date();
     const pad = (value) => String(value).padStart(2, "0");
     const stamp = `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} · ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     if (yearEl) paint(yearEl, String(date.getFullYear()));
     if (nowEl) {
-      paint(nowEl, stamp);
+      paint(nowEl, compactClock.matches
+        ? `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+        : stamp);
+      nowEl.setAttribute("aria-label", stamp);
+      nowEl.title = stamp;
       nowEl.dateTime = date.toISOString();
     }
-    window.setTimeout(tick, 1000 - (Date.now() % 1000));
+    clockTimer = window.setTimeout(tick, 1000 - (Date.now() % 1000));
   }
 
+  compactClock.addEventListener("change", tick);
   tick();
 })();
