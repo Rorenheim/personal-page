@@ -81,6 +81,9 @@ try {
   };
   await send("Page.enable");
   await send("Runtime.enable");
+  const cpuRate = Number(process.env.TEST_CPU_RATE || 1);
+  assert(Number.isFinite(cpuRate) && cpuRate >= 1, "TEST_CPU_RATE must be at least 1");
+  await send("Emulation.setCPUThrottlingRate", { rate: cpuRate });
   await viewport(390);
   await send("Page.navigate", { url: `${base}/` });
   await until('!!window.watchTileMotion && !!document.querySelector("[data-glyph=projects] canvas")');
@@ -104,8 +107,11 @@ try {
   await center('a.card[href="about.html"]');
   await until('document.querySelector("a.card[href=\\"about.html\\"]").classList.contains("is-motion-active")');
   const hand = await evaluate('document.querySelector("[data-glyph=about]").innerHTML');
+  await evaluate('window.__originalDots = [...document.querySelectorAll("[data-glyph=about] .hand circle")]');
   await sleep(250);
   assert.notEqual(await evaluate('document.querySelector("[data-glyph=about]").innerHTML'), hand, "Scroll alone should animate the tile");
+  assert(await evaluate('window.__originalDots.some(dot => dot.isConnected)'),
+    "Animated SVG should reuse existing circles rather than rebuild every frame");
   await center(".card-feature");
   await until('document.querySelector(".card-feature").classList.contains("is-motion-active")');
   assert(!(await evaluate('document.querySelector("a.card[href=\\"about.html\\"]").classList.contains("is-motion-active")')), "Offscreen tile should deactivate");

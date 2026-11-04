@@ -251,28 +251,65 @@
   //   broad shapes stay crisp instead of growing a fringe of small dots.
   // - "trace" moves each source dot to its nearest cell, for lines one dot wide.
   function part(layers, pivot = [0, 0], mask = null, mode = "cover") {
-    const lookup = new Map();
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
     layers.forEach(({ cells }, index) => {
       cells.forEach(([x, y]) => {
-        lookup.set(key(x, y), index);
         minX = Math.min(minX, x);
         minY = Math.min(minY, y);
         maxX = Math.max(maxX, x + 1);
         maxY = Math.max(maxY, y + 1);
       });
     });
-    return { layers, lookup, bounds: [minX, minY, maxX, maxY], pivot, mask, mode, drawn: [] };
+    const lookupWidth = maxX - minX;
+    const lookup = new Int16Array(lookupWidth * (maxY - minY)).fill(-1);
+    layers.forEach(({ cells }, index) => {
+      cells.forEach(([x, y]) => { lookup[(y - minY) * lookupWidth + x - minX] = index; });
+    });
+    return {
+      layers, lookup, lookupWidth, bounds: [minX, minY, maxX, maxY],
+      pivot, mask, mode, drawn: [], nodes: layers.map(() => new Map()),
+      hits: new Uint16Array(layers.length),
+    };
   }
 
   function commit(target, out) {
     out.forEach((html, index) => {
       if (target.drawn[index] === html) return;
       target.drawn[index] = html;
-      target.layers[index].group.innerHTML = html;
+      const group = target.layers[index].group;
+      const nodes = target.nodes[index];
+      // Keep a circle per lattice cell instead of parsing/recreating the entire
+      // SVG layer every frame. Detached circles are reused on the next pose.
+      if (!nodes.size) {
+        group.querySelectorAll("circle.mark").forEach((node) => {
+          nodes.set(`${node.getAttribute("cx")},${node.getAttribute("cy")}`, node);
+        });
+      }
+      const visible = new Set();
+      const pattern = /style="--p:([^"]+)" cx="([^"]+)" cy="([^"]+)" r="([^"]+)"/g;
+      let match;
+      while ((match = pattern.exec(html))) {
+        const [, p, x, y, radius] = match;
+        const cell = `${x},${y}`;
+        visible.add(cell);
+        let node = nodes.get(cell);
+        if (!node) {
+          node = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          node.setAttribute("class", "mark");
+          node.style.setProperty("--p", p);
+          node.setAttribute("cx", x);
+          node.setAttribute("cy", y);
+          nodes.set(cell, node);
+        }
+        if (node.getAttribute("r") !== radius) node.setAttribute("r", radius);
+        if (node.parentNode !== group) group.appendChild(node);
+      }
+      nodes.forEach((node, cell) => {
+        if (!visible.has(cell) && node.parentNode === group) node.remove();
+      });
     });
   }
 
@@ -304,7 +341,7 @@
   }
 
   function render(target, width, { angle = 0, tx = 0, ty = 0, sx = 1, sy = 1 } = {}) {
-    const { layers, lookup, bounds, pivot, mask, mode } = target;
+    const { layers, lookup, lookupWidth, bounds, pivot, mask, mode, hits } = target;
     const [px, py] = pivot;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
@@ -330,7 +367,6 @@
       y1 = Math.max(y1, fy);
     });
     const out = layers.map(() => "");
-    const hits = new Array(layers.length);
     for (let row = Math.floor(y0); row < Math.ceil(y1); row += 1) {
       for (let col = Math.floor(x0); col < Math.ceil(x1); col += 1) {
         hits.fill(0);
@@ -344,8 +380,11 @@
             const qy = y - py - ty;
             const sourceX = px + (qx * cos + qy * sin) / scaleX;
             const sourceY = py + (-qx * sin + qy * cos) / scaleY;
-            const index = lookup.get(key(Math.floor(sourceX), Math.floor(sourceY)));
-            if (index === undefined) continue;
+            const cellX = Math.floor(sourceX);
+            const cellY = Math.floor(sourceY);
+            if (cellX < bounds[0] || cellX >= bounds[2] || cellY < bounds[1] || cellY >= bounds[3]) continue;
+            const index = lookup[(cellY - bounds[1]) * lookupWidth + cellX - bounds[0]];
+            if (index < 0) continue;
             hits[index] += 1;
             total += 1;
           }

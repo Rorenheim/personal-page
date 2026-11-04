@@ -1,4 +1,5 @@
 import { mountGlass } from "./glass.js";
+import { createInkMask } from "./ink-mask.js";
 
 const host = document.getElementById("field");
 if (!host) throw new Error("Missing #field");
@@ -21,27 +22,30 @@ document.body.append(video);
 
 const ink = document.createElement("canvas");
 const inkCtx = ink.getContext("2d", { willReadFrequently: true });
-
-function smoothstep(edge0, edge1, value) {
-  const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
-  return t * t * (3 - 2 * t);
-}
+const applyInkMask = createInkMask();
+const inkElements = Array.from(document.querySelectorAll(".ink"), (el) => ({ el, x: NaN, y: NaN }));
+let inkReady = false;
 
 function resizeInk() {
   const aspect = window.innerWidth / Math.max(1, window.innerHeight);
-  ink.height = 140;
-  ink.width = Math.max(1, Math.round(140 * aspect));
+  const width = Math.max(1, Math.round(140 * aspect));
+  if (ink.height !== 140 || ink.width !== width) {
+    ink.height = 140;
+    ink.width = width;
+  }
 }
 
 function placeInk() {
   // Read all positions before writing styles to avoid layout thrashing on scroll.
-  const positions = Array.from(document.querySelectorAll(".ink"), (el) => {
-    const rect = el.getBoundingClientRect();
-    return { el, x: rect.left, y: rect.top };
+  const positions = inkElements.map((entry) => {
+    const rect = entry.el.getBoundingClientRect();
+    return { entry, x: rect.left, y: rect.top };
   });
-  positions.forEach(({ el, x, y }) => {
-    el.style.setProperty("--ink-x", `${x}px`);
-    el.style.setProperty("--ink-y", `${y}px`);
+  positions.forEach(({ entry, x, y }) => {
+    if (entry.x !== x) entry.el.style.setProperty("--ink-x", `${x}px`);
+    if (entry.y !== y) entry.el.style.setProperty("--ink-y", `${y}px`);
+    entry.x = x;
+    entry.y = y;
   });
 }
 
@@ -63,56 +67,33 @@ function updateInk(source, sourceWidth, sourceHeight) {
   );
   inkCtx.filter = "none";
   const frame = inkCtx.getImageData(0, 0, width, height);
-  const pixels = frame.data;
-  const values = new Uint8Array(width * height);
-  for (let p = 0, i = 0; i < pixels.length; i += 4, p += 1) {
-    const luma = (pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722) / 255;
-    const light = smoothstep(0.28, 0.62, luma);
-    values[p] = Math.round((1 - light) * 255);
-  }
-  const radius = 1;
-  const grown = new Uint8Array(values.length);
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      let max = 0;
-      const y0 = Math.max(0, y - radius);
-      const y1 = Math.min(height - 1, y + radius);
-      const x0 = Math.max(0, x - radius);
-      const x1 = Math.min(width - 1, x + radius);
-      for (let yy = y0; yy <= y1; yy += 1) {
-        for (let xx = x0; xx <= x1; xx += 1) {
-          const sample = values[yy * width + xx];
-          if (sample > max) max = sample;
-        }
-      }
-      grown[y * width + x] = max;
-    }
-  }
-  for (let p = 0, i = 0; p < grown.length; p += 1, i += 4) {
-    pixels[i] = grown[p];
-    pixels[i + 1] = grown[p];
-    pixels[i + 2] = grown[p];
-    pixels[i + 3] = 255;
-  }
+  applyInkMask(frame.data, width, height);
   inkCtx.putImageData(frame, 0, 0);
   document.documentElement.style.setProperty("--ink", `url("${ink.toDataURL("image/png")}")`);
-  document.documentElement.classList.add("ink-live");
-  placeInk();
+  if (!inkReady) {
+    inkReady = true;
+    document.documentElement.classList.add("ink-live");
+    scheduleInkPlacement();
+  }
 }
 
 resizeInk();
 window.addEventListener("resize", () => {
   resizeInk();
-  placeInk();
+  scheduleInkPlacement();
 });
 let inkScrollFrame = 0;
-window.addEventListener("scroll", () => {
+function scheduleInkPlacement() {
   if (inkScrollFrame) return;
   inkScrollFrame = requestAnimationFrame(() => {
     inkScrollFrame = 0;
     placeInk();
   });
-}, { passive: true });
+}
+window.addEventListener("scroll", scheduleInkPlacement, { passive: true });
+if (document.fonts) document.fonts.ready.then(scheduleInkPlacement);
+const inkResizeObserver = new ResizeObserver(scheduleInkPlacement);
+inkElements.forEach(({ el }) => inkResizeObserver.observe(el));
 
 const poster = new Image();
 poster.decoding = "async";
