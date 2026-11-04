@@ -115,11 +115,6 @@ poster.addEventListener("load", () => {
 
   // Capping the step keeps shapes from jumping after the tab was hidden.
   const loop = (now) => {
-    if (document.hidden) {
-      last = now;
-      requestAnimationFrame(loop);
-      return;
-    }
     const step = now - last;
     if (step >= FRAME_MS) {
       last = now;

@@ -1,2 +1,1 @@
 - [Touch browser checks](touch-browser-checks.md) — use raw touch events for headless Chromium gesture checks.
-- [Performance constraints](performance-constraints.md) — preserve videos, animations, visual quality, and actual UX when optimizing for lower-end devices.
