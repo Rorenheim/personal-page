@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello</title>
+  <script>document.documentElement.classList.add("is-loading")</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,600&family=Doto:ROND,wght@100,600&family=Inter:wght@500&family=Space+Grotesk:wght@500&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/silhouette.png">
+  <link rel="preload" as="video" href="Silhouette%20calm%20background%20loop%20_40%20s_.mp4" type="video/mp4">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="loader" role="status" aria-label="Loading">
+    <span class="loader-rule"></span>
+  </div>
+  <div id="field" aria-hidden="true"></div>
+  <div class="site">
+    <main>
+      <section class="hero">
+        <h1 class="ink"><span class="ink-rim" aria-hidden="true">Hello&#8202;</span><span class="ink-face">Hello&#8202;</span></h1>
+        <p class="lede ink"><span class="ink-rim" aria-hidden="true">I am Paul. Building products is what I do.</span><span class="ink-face">I am Paul. Building products is what I do.</span></p>
+      </section>
+
+      <section class="work" id="projects" aria-label="Projects">
+        <div class="row short-a">
+          <a class="card is-light" href="about.html">
+            <div class="glyph" data-glyph="about"></div>
+            <h2>About</h2>
+          </a>
+          <a class="card" href="work.html">
+            <div class="glyph" data-glyph="work"></div>
+            <h2>Work</h2>
+          </a>
+        </div>
+
+        <div class="row feature">
+          <a class="card card-feature" href="projects.html">
+            <div class="glyph" data-glyph="projects"></div>
+            <h2>Personal projects</h2>
+          </a>
+          <div class="col">
+            <article class="card card-motto is-light">
+              <p class="motto">
+                <span>Work hard.</span>
+                <span>Think weird.</span>
+                <span>Have fun<span class="motto-dot">.</span></span>
+              </p>
+            </article>
+            <a class="card" href="blog.html">
+              <div class="glyph" data-glyph="blog"></div>
+              <h2>Blog</h2>
+            </a>
+          </div>
+        </div>
+
+        <div class="row short-c">
+          <div class="card is-light card-links" id="links">
+            <div class="link-row">
+              <a href="https://www.linkedin.com/in/kalaba" rel="noreferrer">
+                <span class="glyph" data-glyph="linkedin"></span>
+                <span class="link-label">LinkedIn</span>
+              </a>
+              <a href="https://github.com/Rorenheim?tab=repositories" rel="noreferrer">
+                <span class="glyph" data-glyph="github"></span>
+                <span class="link-label">GitHub</span>
+              </a>
+              <a href="mailto:paul@kalaba.me">
+                <span class="glyph" data-glyph="mail"></span>
+                <span class="link-label">Email</span>
+              </a>
+            </div>
+            <h2>Links</h2>
+          </div>
+          <a class="card" href="principles.html">
+            <div class="glyph" data-glyph="principles"></div>
+            <h2>Guiding principles</h2>
+          </a>
+        </div>
+
+        <div class="row short-d">
+          <article class="card card-game" id="invaders">
+            <div class="glyph" data-glyph="invader"></div>
+            <button type="button" class="play">Play</button>
+            <canvas aria-hidden="true"></canvas>
+          </article>
+          <a class="card is-light" href="books.html">
+            <div class="glyph" data-glyph="books"></div>
+            <h2>Book recommendations</h2>
+          </a>
+        </div>
+      </section>
+
+      <footer class="colophon">
+        <span class="ink year" id="year"><span class="ink-rim" aria-hidden="true">2026</span><span class="ink-face">2026</span></span>
+        <nav class="colophon-legal" aria-label="Legal">
+          <a class="ink" href="imprint.html"><span class="ink-rim" aria-hidden="true">Imprint</span><span class="ink-face">Imprint</span></a>
+          <a class="ink" href="privacy.html"><span class="ink-rim" aria-hidden="true">Privacy policy</span><span class="ink-face">Privacy policy</span></a>
+        </nav>
+        <time class="ink now" id="now" datetime=""><span class="ink-rim" aria-hidden="true"></span><span class="ink-face">––</span></time>
+      </footer>
+    </main>
+  </div>
+  <script src="js/loader.js"></script>
+  <script type="module" src="js/fluted.js"></script>
+  <script src="js/widgets.js?v=9"></script>
+  <script src="js/sky.js?v=9"></script>
+  <script src="js/invaders.js"></script>
+  <script src="js/cursor.js"></script>
+</body>
+</html>

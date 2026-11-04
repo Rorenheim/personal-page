@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Personal projects · Paul Kalaba</title>
+  <meta name="description" content="Things Paul Kalaba builds on the side.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,600&family=Inter:wght@500&family=Space+Grotesk:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body class="page page-projects">
+  <div id="field" aria-hidden="true"></div>
+  <header class="bar"></header>
+
+  <main class="page-main">
+    <header class="page-head">
+      <h1 class="page-title">Personal projects</h1>
+      <p class="page-lede">Things I build on the side, mostly to scratch my own itch.</p>
+    </header>
+
+    <!--
+      One slide per project. Each slide picks its own grid with data-layout (a to e).
+      To swap a placeholder for a real image, put <img src="..." alt="..."> inside the figure
+      and remove the figcaption.
+    -->
+    <section class="carousel" data-carousel aria-roledescription="carousel" aria-label="Personal projects">
+      <div class="carousel-viewport">
+        <div class="carousel-track">
+          <article class="slide" id="casseo" data-layout="a" aria-roledescription="slide" aria-label="Casseo, 1 of 5">
+            <figure class="tile t-img t-i1" style="--t:0"><figcaption>Image placeholder</figcaption></figure>
+            <div class="tile t-name" style="--t:1"><h2>Casseo</h2></div>
+            <figure class="tile t-img t-i2 is-deep" style="--t:2"><figcaption>Image placeholder</figcaption></figure>
+            <div class="tile t-desc" style="--t:3">
+              <p>Placeholder description. What Casseo is, who it is for, and the problem it solves.</p>
+            </div>
+          </article>
+
+          <article class="slide" id="doc2html" data-layout="b" aria-roledescription="slide" aria-label="doc2html, 2 of 5">
+            <figure class="tile t-img t-i1 is-deep" style="--t:0"><figcaption>Image placeholder</figcaption></figure>
+            <div class="tile t-name" style="--t:1"><h2>doc2html</h2></div>
+            <figure class="tile t-img t-i2" style="--t:2"><figcaption>Image placeholder</figcaption></figure>
+            <div class="tile t-desc" style="--t:3">
+              <p>Placeholder description. What doc2html does and why it exists.</p>
+              <span class="t-status">Status placeholder</span>
+            </div>
+          </article>
+
+          <article class="slide" id="doch" data-layout="c" aria-roledescription="slide" aria-label="DOCH app, 3 of 5">
+            <div class="tile t-desc" style="--t:0">
+              <p>Placeholder description. What the DOCH app is, who uses it, and what makes it different. A taller tile leaves room for a few more lines about how it came to be.</p>
+              <span class="t-status">Status placeholder</span>
+            </div>
+            <figure class="tile t-img t-i1" style="--t:1"><figcaption>Image placeholder</figcaption></figure>
+            <div class="tile t-name" style="--t:2"><h2>DOCH app</h2></div>
+            <figure class="tile t-img t-i2 is-deep" style="--t:3"><figcaption>Image placeholder</figcaption></figure>
+          </article>
+
+          <article class="slide" id="portfolio-optimizer" data-layout="d" aria-roledescription="slide" aria-label="Portfolio optimizer, 4 of 5">
+            <figure class="tile t-img t-i1 is-deep" style="--t:0"><figcaption>Image placeholder</figcaption></figure>
+            <div class="tile t-name" style="--t:1"><h2>Portfolio optimizer</h2></div>
+            <div class="tile t-desc" style="--t:2">
+              <p>Placeholder description. What the Portfolio optimizer does and who it helps.</p>
+              <span class="t-status">Status placeholder</span>
+            </div>
+            <figure class="tile t-img t-i2" style="--t:3"><figcaption>Image placeholder</figcaption></figure>
+          </article>
+
+          <article class="slide" id="kalabot" data-layout="e" aria-roledescription="slide" aria-label="Kalabot, 5 of 5">
+            <figure class="tile t-img t-i2 is-deep" style="--t:0"><figcaption>Image placeholder</figcaption></figure>
+            <figure class="tile t-img t-i1" style="--t:1"><figcaption>Image placeholder</figcaption></figure>
+            <div class="tile t-name" style="--t:2"><h2>Kalabot</h2></div>
+            <div class="tile t-desc" style="--t:3">
+              <p>Placeholder description. What Kalabot is and what it can do for you.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="carousel-controls">
+        <div class="carousel-status">
+          <p class="carousel-count" aria-live="polite"><span class="carousel-now">01</span> <span>/ 05</span></p>
+          <div class="carousel-dots"></div>
+        </div>
+        <div class="round-buttons">
+          <button type="button" class="round-button" data-step="-1" aria-label="Previous project">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10H4M9 5l-5 5 5 5"/></svg>
+          </button>
+          <button type="button" class="round-button" data-step="1" aria-label="Next project">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <span class="ink year" id="year"><span class="ink-rim" aria-hidden="true">2026</span><span class="ink-face">2026</span></span>
+    <nav class="colophon-legal" aria-label="Legal">
+      <a class="ink" href="imprint.html"><span class="ink-rim" aria-hidden="true">Imprint</span><span class="ink-face">Imprint</span></a>
+      <a class="ink" href="privacy.html"><span class="ink-rim" aria-hidden="true">Privacy policy</span><span class="ink-face">Privacy policy</span></a>
+    </nav>
+    <time class="ink now" id="now" datetime=""><span class="ink-rim" aria-hidden="true"></span><span class="ink-face">––</span></time>
+  </footer>
+
+  <script type="module" src="js/drift.js"></script>
+  <script src="js/menu.js"></script>
+  <script src="js/carousel.js"></script>
+  <script src="js/widgets.js?v=7"></script>
+  <script src="js/cursor.js"></script>
+</body>
+</html>
