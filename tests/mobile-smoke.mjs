@@ -116,7 +116,7 @@ try {
   ` });
   await viewport(390);
   await send("Page.navigate", { url: `${base}/` });
-  await until('!!window.watchTileMotion && !!document.querySelector("[data-glyph=projects] .baked-project-poster")');
+  await until('!!window.watchTileMotion && !!document.querySelector("[data-glyph=projects] canvas")');
   await until('!document.documentElement.classList.contains("is-loading")');
   assert(await evaluate('matchMedia("(pointer:coarse)").matches'), "Touch emulation must be active");
   const screenshot = await send("Page.captureScreenshot", { format: "png" });
@@ -142,9 +142,9 @@ try {
   assert.equal(await evaluate('document.querySelector("[data-glyph=about]").innerHTML'), hand, "Mobile tiles must stay still");
   assert(!(await evaluate('!!document.querySelector(".is-motion-active")')), "Scrolling must not activate tiles");
   await center(".card-feature");
-  const rocket = await evaluate('document.querySelector("[data-glyph=projects]").innerHTML');
+  const rocket = await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform');
   await sleep(250);
-  assert.equal(await evaluate('document.querySelector("[data-glyph=projects]").innerHTML'), rocket);
+  assert.equal(await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform'), rocket);
   const background = await evaluate(`(() => {
     const c=document.querySelector("#field canvas"), v=document.querySelector("body > video");
     return {pixels: c.width*c.height, time: v.currentTime, frames: window.backgroundFrames, ink: document.documentElement.classList.contains("ink-live")};
