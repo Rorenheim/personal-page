@@ -96,8 +96,10 @@ const poster = new Image();
 poster.decoding = "async";
 poster.src = canvas.toDataURL("image/png");
 
-poster.addEventListener("load", () => {
-  const { draw } = mountGlass(host, poster);
+poster.addEventListener("load", async () => {
+  const { draw, compiled } = mountGlass(host, poster);
+  // Do not queue animation uploads while the shader is still compiling.
+  await compiled;
   let elapsed = 0;
   let last = performance.now();
 

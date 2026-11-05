@@ -81,8 +81,23 @@ try {
   };
   await send("Page.enable");
   await send("Runtime.enable");
+  await send("Page.bringToFront");
   await send("Page.addScriptToEvaluateOnNewDocument", { source: `
     window.backgroundFrames = 0;
+    window.backgroundAllocations = 0;
+    window.backgroundUpdates = 0;
+    window.gameFrames = 0;
+    window.gameFills = 0;
+    const clear = CanvasRenderingContext2D.prototype.clearRect;
+    CanvasRenderingContext2D.prototype.clearRect = function(...args) {
+      if (this.canvas.closest("#invaders")) window.gameFrames++;
+      return clear.apply(this, args);
+    };
+    const fill = CanvasRenderingContext2D.prototype.fill;
+    CanvasRenderingContext2D.prototype.fill = function(...args) {
+      if (this.canvas.closest("#invaders")) window.gameFills++;
+      return fill.apply(this, args);
+    };
     for (const type of [window.WebGLRenderingContext, window.WebGL2RenderingContext]) {
       if (!type) continue;
       const draw = type.prototype.drawArrays;
@@ -90,6 +105,13 @@ try {
         if (this.canvas.closest("#field")) window.backgroundFrames++;
         return draw.apply(this, args);
       };
+      for (const [method, count] of [["texImage2D", "backgroundAllocations"], ["texSubImage2D", "backgroundUpdates"]]) {
+        const original = type.prototype[method];
+        type.prototype[method] = function(...args) {
+          if (this.canvas.closest("#field")) window[count]++;
+          return original.apply(this, args);
+        };
+      }
     }
   ` });
   await viewport(390);
@@ -132,6 +154,32 @@ try {
   await sleep(400);
   assert(await evaluate(`document.querySelector("body > video").currentTime > ${background.time}`), "Background must keep playing");
   assert(await evaluate(`window.backgroundFrames > ${background.frames}`), "Background shader must keep rendering");
+  const texture = await evaluate("({ allocations: backgroundAllocations, updates: backgroundUpdates })");
+  await sleep(400);
+  assert.equal(await evaluate("backgroundAllocations"), texture.allocations, "Video frames must reuse texture storage");
+  assert(await evaluate(`backgroundUpdates > ${texture.updates}`), "Existing background texture should receive new frames");
+
+  // Starting Play should draw batched sprites, not hundreds of separate dots.
+  await center("#invaders");
+  await evaluate('document.querySelector("#invaders .play").click()');
+  await until('window.__invaders.state().mode === "play" && gameFrames > 2');
+  const playing = await evaluate("({ frames: gameFrames, fills: gameFills, background: backgroundFrames })");
+  // Software-rendered headless browsers need not produce frames within a
+  // 300ms wall-clock window. Verify actual frame progress instead.
+  await until(`gameFrames > ${playing.frames + 2} && backgroundFrames > ${playing.background}`);
+  const played = await evaluate("({ frames: gameFrames, fills: gameFills, background: backgroundFrames })");
+  assert(played.frames > playing.frames, "Game should animate while visible");
+  assert((played.fills - playing.fills) / (played.frames - playing.frames) <= 20, "Sprites should use one fill each");
+  assert(played.background > playing.background, "Background must remain animated during Play");
+  const gameScreenshot = await send("Page.captureScreenshot", { format: "png" });
+  await writeFile("generated-artifacts/mobile-game.png", Buffer.from(gameScreenshot.data, "base64"));
+  await center('a.card[href="about.html"]');
+  const paused = await evaluate("gameFrames");
+  await sleep(250);
+  assert.equal(await evaluate("gameFrames"), paused, "Offscreen game should not render");
+  await center("#invaders");
+  await until(`gameFrames > ${paused}`);
+  assert.equal(await evaluate("window.__invaders.state().mode"), "play", "Game should resume in place");
 
   // A real touch swipe scrolls instead of navigating.
   const before = await evaluate("scrollY");
@@ -160,7 +208,7 @@ try {
   await sleep(80);
   await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await until('location.pathname.endsWith("/about.html")');
-  console.log("PASS: mobile footer, static tiles, animated low-resolution background, swipe and tap navigation");
+  console.log("PASS: mobile layout, static tiles, texture reuse, Play rendering, offscreen pause/resume, animated background, swipe and tap navigation");
 
   assert.deepEqual(errors, [], "No uncaught browser exceptions");
 } finally {

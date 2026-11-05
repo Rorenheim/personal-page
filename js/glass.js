@@ -58,6 +58,9 @@ export function mountGlass(host, poster) {
   );
 
   const gl = mount.gl;
+  let textureWidth = poster.naturalWidth || poster.width;
+  let textureHeight = poster.naturalHeight || poster.height;
+  let filterReady = false;
 
   function draw(source, width, height) {
     const run = () => {
@@ -66,8 +69,17 @@ export function mountGlass(host, poster) {
       const aspect = mount.uniformLocations.u_imageAspectRatio;
       gl.activeTexture(gl.TEXTURE0 + textureUnit);
       gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      if (width === textureWidth && height === textureHeight) {
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      } else {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+        textureWidth = width;
+        textureHeight = height;
+      }
+      if (!filterReady) {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        filterReady = true;
+      }
       if (aspect && width && height) gl.uniform1f(aspect, width / height);
       mount.render(performance.now());
     };

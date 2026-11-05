@@ -21,6 +21,10 @@ document.body.append(video);
 
 const ink = document.createElement("canvas");
 const inkCtx = ink.getContext("2d", { willReadFrequently: true });
+const inkElements = Array.from(document.querySelectorAll(".ink"));
+let inkPositionsDirty = true;
+let inkValues = new Uint8Array(0);
+let inkHorizontal = new Uint8Array(0);
 
 function smoothstep(edge0, edge1, value) {
   const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
@@ -31,11 +35,16 @@ function resizeInk() {
   const aspect = window.innerWidth / Math.max(1, window.innerHeight);
   ink.height = 140;
   ink.width = Math.max(1, Math.round(140 * aspect));
+  inkValues = new Uint8Array(ink.width * ink.height);
+  inkHorizontal = new Uint8Array(inkValues.length);
+  inkPositionsDirty = true;
 }
 
 function placeInk() {
+  if (!inkPositionsDirty) return;
+  inkPositionsDirty = false;
   // Read all positions before writing styles to avoid layout thrashing on scroll.
-  const positions = Array.from(document.querySelectorAll(".ink"), (el) => {
+  const positions = inkElements.map((el) => {
     const rect = el.getBoundingClientRect();
     return { el, x: rect.left, y: rect.top };
   });
@@ -65,34 +74,30 @@ function updateInk(source, sourceWidth, sourceHeight) {
   inkCtx.filter = "none";
   const frame = inkCtx.getImageData(0, 0, width, height);
   const pixels = frame.data;
-  const values = new Uint8Array(width * height);
+  const values = inkValues;
   for (let p = 0, i = 0; i < pixels.length; i += 4, p += 1) {
     const luma = (pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722) / 255;
     const light = smoothstep(0.28, 0.62, luma);
     values[p] = Math.round((1 - light) * 255);
   }
-  const radius = 1;
-  const grown = new Uint8Array(values.length);
+  // A separable maximum gives the same 3x3 mask without nine nested samples
+  // per pixel, and both work buffers are reused across frames.
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
-      let max = 0;
-      const y0 = Math.max(0, y - radius);
-      const y1 = Math.min(height - 1, y + radius);
-      const x0 = Math.max(0, x - radius);
-      const x1 = Math.min(width - 1, x + radius);
-      for (let yy = y0; yy <= y1; yy += 1) {
-        for (let xx = x0; xx <= x1; xx += 1) {
-          const sample = values[yy * width + xx];
-          if (sample > max) max = sample;
-        }
-      }
-      grown[y * width + x] = max;
+      const p = y * width + x;
+      inkHorizontal[p] = Math.max(values[p], values[p - (x > 0 ? 1 : 0)], values[p + (x < width - 1 ? 1 : 0)]);
     }
   }
-  for (let p = 0, i = 0; p < grown.length; p += 1, i += 4) {
-    pixels[i] = grown[p];
-    pixels[i + 1] = grown[p];
-    pixels[i + 2] = grown[p];
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const p = y * width + x;
+      values[p] = Math.max(inkHorizontal[p], inkHorizontal[p - (y > 0 ? width : 0)], inkHorizontal[p + (y < height - 1 ? width : 0)]);
+    }
+  }
+  for (let p = 0, i = 0; p < values.length; p += 1, i += 4) {
+    pixels[i] = values[p];
+    pixels[i + 1] = values[p];
+    pixels[i + 2] = values[p];
     pixels[i + 3] = 255;
   }
   inkCtx.putImageData(frame, 0, 0);
@@ -109,12 +114,19 @@ if (!touchMotion.matches) {
   });
   let inkScrollFrame = 0;
   window.addEventListener("scroll", () => {
+    inkPositionsDirty = true;
     if (inkScrollFrame) return;
     inkScrollFrame = requestAnimationFrame(() => {
       inkScrollFrame = 0;
       placeInk();
     });
   }, { passive: true });
+  document.fonts?.ready.then(() => { inkPositionsDirty = true; });
+  const footer = document.querySelector(".colophon");
+  if (footer) {
+    new MutationObserver(() => { inkPositionsDirty = true; })
+      .observe(footer, { childList: true, subtree: true, characterData: true });
+  }
 }
 
 const poster = new Image();

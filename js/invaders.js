@@ -33,6 +33,11 @@
   let height = 0;
   let unit = 4;
   let game = null;
+  let inViewport = true;
+  let pixelRatio = 0;
+  let inkColor = "#fff";
+  const spritePaths = new WeakMap();
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   function spriteSize(sprite) {
     return { w: sprite[0].length * unit, h: sprite.length * unit };
@@ -80,9 +85,14 @@
 
   function resize() {
     const rect = root.getBoundingClientRect();
-    width = Math.max(1, rect.width);
-    height = Math.max(1, rect.height);
+    const nextWidth = Math.max(1, rect.width);
+    const nextHeight = Math.max(1, rect.height);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (width === nextWidth && height === nextHeight && pixelRatio === dpr) return;
+    width = nextWidth;
+    height = nextHeight;
+    pixelRatio = dpr;
+    inkColor = getComputedStyle(root).color;
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -160,7 +170,7 @@
     game.sparks = [];
     game.bullet = null;
     game.shots = [];
-    const quiet = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const quiet = reducedMotion.matches;
     if (quiet) {
       explode(width * 0.32, height * 0.32);
       explode(width * 0.68, height * 0.24);
@@ -192,7 +202,7 @@
 
   function celebrate(dt) {
     game.wonTime += dt;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (reducedMotion.matches) return;
     game.boomAcc -= dt;
     if (game.boomAcc <= 0 && game.shells.length < 3) {
       launchShell();
@@ -315,22 +325,33 @@
   }
 
   function blit(sprite, x, y) {
-    const radius = unit * 0.38;
-    sprite.forEach((line, row) => {
-      [...line].forEach((cell, col) => {
-        if (cell !== "#") return;
-        ctx.beginPath();
-        ctx.arc(x + (col + 0.5) * unit, y + (row + 0.5) * unit, radius, 0, Math.PI * 2);
-        ctx.fill();
+    let cached = spritePaths.get(sprite);
+    if (!cached || cached.unit !== unit) {
+      const path = new Path2D();
+      const radius = unit * 0.38;
+      sprite.forEach((line, row) => {
+        for (let col = 0; col < line.length; col += 1) {
+          if (line[col] !== "#") continue;
+          const cx = (col + 0.5) * unit;
+          const cy = (row + 0.5) * unit;
+          path.moveTo(cx + radius, cy);
+          path.arc(cx, cy, radius, 0, Math.PI * 2);
+        }
       });
-    });
+      cached = { unit, path };
+      spritePaths.set(sprite, cached);
+    }
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fill(cached.path);
+    ctx.restore();
   }
 
   function draw() {
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = getComputedStyle(root).backgroundColor;
-    ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = getComputedStyle(root).color;
+    // The transparent canvas already shows the card's background, including
+    // its existing CSS transitions. No per-frame computed-style reads needed.
+    ctx.fillStyle = inkColor;
 
     if (mode === "lost") {
       drawCaption("Try again", game.lostTime);
@@ -380,7 +401,7 @@
   }
 
   function drawCaption(text, time) {
-    const quiet = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const quiet = reducedMotion.matches;
     const blinkOn = quiet || Math.floor(time / 0.45) % 2 === 0;
     if (!blinkOn) return;
     let fontSize = Math.round(Math.min(width * 0.14, height * 0.22, 64));
@@ -400,7 +421,24 @@
     ctx.fill();
   }
 
+  function canRun() {
+    return inViewport && !document.hidden && game && mode !== "idle";
+  }
+
+  function queueFrame() {
+    if (!raf && canRun()) raf = requestAnimationFrame(frame);
+  }
+
+  function refreshVisibility() {
+    cancelAnimationFrame(raf);
+    raf = 0;
+    last = performance.now();
+    queueFrame();
+  }
+
   function frame(now) {
+    raf = 0;
+    if (!canRun()) return;
     const dt = Math.min(0.034, (now - last) / 1000 || 0);
     last = now;
     if (!document.hidden && game && mode !== "idle") {
@@ -409,11 +447,12 @@
       else update(dt);
       if (mode !== "idle") draw();
     }
-    if (mode === "play" || mode === "won" || mode === "lost") raf = requestAnimationFrame(frame);
+    queueFrame();
   }
 
   function start() {
     resize();
+    inkColor = getComputedStyle(root).color;
     game = makeGame(width / 2);
     if (new URLSearchParams(location.search).has("celebrate")) {
       game.aliens.forEach((alien) => { alien.alive = false; });
@@ -422,7 +461,8 @@
     root.classList.add("is-on");
     last = performance.now();
     cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(frame);
+    raf = 0;
+    queueFrame();
   }
 
   if (new URLSearchParams(location.search).has("celebrate")) playButton.textContent = "Win";
@@ -450,9 +490,15 @@
     shoot();
   });
 
-  document.addEventListener("visibilitychange", () => {
-    last = performance.now();
-  });
+  document.addEventListener("visibilitychange", refreshVisibility);
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([entry]) => {
+      const visible = entry.isIntersecting;
+      if (visible === inViewport) return;
+      inViewport = visible;
+      refreshVisibility();
+    }).observe(root);
+  }
 
   new ResizeObserver(resize).observe(root);
   window.__invaders = {
