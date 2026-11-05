@@ -33,6 +33,11 @@
   back.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10H4M9 5 4 10l5 5"/></svg><span>Back</span>';
   bar.append(back);
 
+  const warmHome = document.createElement("link");
+  warmHome.rel = "prefetch";
+  warmHome.href = "index.html";
+  document.head.append(warmHome);
+
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "menu-toggle";
@@ -94,7 +99,62 @@
   const isOpen = () => root.classList.contains("menu-open");
 
   toggle.addEventListener("click", () => (isOpen() ? close() : open()));
-  back.addEventListener("click", (event) => restoreHome(event, back.href));
+
+  let leaving = false;
+  back.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (leaving) return;
+    leaving = true;
+
+    const href = back.href;
+    const box = back.getBoundingClientRect();
+    const ox = `${((box.left + box.width / 2) / window.innerWidth) * 100}%`;
+    const oy = `${((box.top + box.height / 2) / window.innerHeight) * 100}%`;
+    const go = () => {
+      try {
+        sessionStorage.setItem("home-return", "arrive");
+        sessionStorage.setItem("home-return-ox", ox);
+        sessionStorage.setItem("home-return-oy", oy);
+      } catch {}
+      location.assign(href);
+    };
+    if (reduced.matches) {
+      go();
+      return;
+    }
+
+    const cover = document.createElement("div");
+    cover.className = "leave-cover";
+    cover.setAttribute("role", "status");
+    cover.setAttribute("aria-label", "Loading");
+    cover.style.setProperty("--ox", ox);
+    cover.style.setProperty("--oy", oy);
+
+    const sheet = document.createElement("div");
+    sheet.className = "leave-sheet";
+    cover.append(sheet);
+    document.body.append(cover);
+    [...document.body.children].forEach((el) => {
+      if (el !== cover) el.inert = true;
+    });
+    root.classList.add("is-leaving");
+    void sheet.offsetWidth;
+    cover.classList.add("is-covering");
+
+    let went = false;
+    const finish = () => {
+      if (went) return;
+      went = true;
+      go();
+    };
+
+    sheet.addEventListener("transitionend", (endEvent) => {
+      if (endEvent.target !== sheet) return;
+      if (endEvent.propertyName !== "clip-path" && endEvent.propertyName !== "-webkit-clip-path") return;
+      finish();
+    });
+    window.setTimeout(finish, 1300);
+  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && isOpen()) {

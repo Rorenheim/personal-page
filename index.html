@@ -69,7 +69,39 @@
     ]
   }
   </script>
-  <script>document.documentElement.classList.add("is-loading")</script>
+  <script>
+    (function () {
+      function coverArrive() {
+        var flag = null;
+        try { flag = sessionStorage.getItem("home-return"); } catch (e) {}
+        if (flag !== "arrive") return false;
+        document.documentElement.classList.add("is-arriving");
+        try {
+          document.documentElement.style.setProperty("--back-ox", sessionStorage.getItem("home-return-ox") || "50%");
+          document.documentElement.style.setProperty("--back-oy", sessionStorage.getItem("home-return-oy") || "0px");
+        } catch (e) {}
+        if (!document.getElementById("arrive-cover")) {
+          var s = document.createElement("style");
+          s.id = "arrive-cover";
+          s.textContent = "html.is-arriving{overflow:hidden}html.is-arriving::before{content:'';position:fixed;inset:0;z-index:12000;background:#fff;clip-path:circle(150vmax at var(--back-ox,50%) var(--back-oy,0px));pointer-events:none}html.is-arriving #loader{display:none!important}";
+          document.documentElement.appendChild(s);
+        }
+        return true;
+      }
+      coverArrive();
+      window.addEventListener("pageshow", coverArrive);
+      if (document.documentElement.classList.contains("is-arriving")) return;
+      var nav = performance.getEntriesByType("navigation")[0];
+      var type = nav && nav.type;
+      var same = false;
+      try { same = new URL(document.referrer).origin === location.origin; } catch (e) {}
+      if (type === "back_forward" || type === "prerender" || (type === "navigate" && same)) {
+        document.documentElement.classList.add("is-returning");
+        return;
+      }
+      document.documentElement.classList.add("is-loading");
+    })();
+  </script>
   <link rel="icon" href="favicon.ico" sizes="48x48">
   <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">

@@ -44,6 +44,39 @@ html.is-loading { overflow: hidden; }
   pointer-events: none;
 }
 
+/* Document view transitions are skipped in loader.js so in-site moves stay instant. */
+
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.65s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.is-returning #loader { display: none; }
+
+html.is-arriving { overflow: hidden; }
+
+html.is-arriving::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: #fff;
+  clip-path: circle(150vmax at var(--back-ox, 50%) var(--back-oy, 0px));
+  pointer-events: none;
+}
+
+html.is-arriving.is-uncovering::before {
+  clip-path: circle(0 at var(--back-ox, 50%) var(--back-oy, 0px));
+  transition: clip-path 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.is-arriving #loader { display: none; }
+
 .theme-dark #loader { background: #181818; }
 
 .theme-dark .loader-rule { background: #f2f2f2; }
@@ -572,6 +605,9 @@ a.card.is-light.is-motion-active { background: #f4f4f4; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   #loader { transition: none; }
+  html.is-arriving.is-uncovering::before { transition: none; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none !important; }
   .loader-rule { animation: none; opacity: 1; transform: none; }
   .card { transition: none; }
   .glyph svg g,

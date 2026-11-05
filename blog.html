@@ -21,7 +21,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,600&family=Inter:wght@500&family=Space+Grotesk:wght@500&display=swap" rel="stylesheet">
-  <script>document.documentElement.classList.add("is-loading")</script>
+  <script>
+    (function () {
+      var nav = performance.getEntriesByType("navigation")[0];
+      var type = nav && nav.type;
+      var same = false;
+      try { same = new URL(document.referrer).origin === location.origin; } catch (e) {}
+      if (type === "back_forward" || type === "prerender" || (type === "navigate" && same)) {
+        document.documentElement.classList.add("is-returning");
+        return;
+      }
+      document.documentElement.classList.add("is-loading");
+    })();
+  </script>
   <link rel="modulepreload" href="js/drift.js">
   <script type="speculationrules">
   {
