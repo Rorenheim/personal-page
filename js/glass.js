@@ -13,6 +13,7 @@ const sizing = defaultObjectSizing;
 // The mount only accepts a loaded <img> for its first texture; later frames are
 // uploaded straight from a video or canvas through `draw`.
 export function mountGlass(host, poster) {
+  const mobile = window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const mount = new ShaderMount(
     host,
     flutedGlassFragmentShader,
@@ -51,8 +52,8 @@ export function mountGlass(host, poster) {
     undefined,
     0,
     0,
-    2,
-    undefined,
+    mobile ? 1 : 2,
+    mobile ? 262144 : undefined,
     ["u_image"]
   );
 
@@ -83,7 +84,9 @@ export function mountGlass(host, poster) {
   const compiled = mount.whenReady().then(async (ok) => {
     if (!ok) return false;
     const started = performance.now();
-    const fullSize = () => mount.canvasElement.width >= mount.parentElement.clientWidth;
+    const fullSize = () => mobile
+      ? mount.canvasElement.width > 0 && mount.canvasElement.height > 0
+      : mount.canvasElement.width >= mount.parentElement.clientWidth;
     while (!fullSize() && performance.now() - started < 1500) {
       await new Promise((resolve) => requestAnimationFrame(resolve));
     }

@@ -376,22 +376,11 @@
   const touchMotion = window.matchMedia("(hover: none), (pointer: coarse)");
   const fineHover = window.matchMedia("(hover: hover) and (pointer: fine)");
 
-  // Touch scrolling never emulates a tap or consumes a gesture. Only tiles near
-  // the middle of the viewport animate; desktop keeps its normal hover behavior.
+  // Tiles stay still on touch devices. Only desktop hover/focus starts motion.
   const tileWatchers = new Map();
-  const tileObserver = !reducedMotion && "IntersectionObserver" in window
-    ? new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        const watcher = tileWatchers.get(entry.target);
-        if (watcher && touchMotion.matches) {
-          watcher.setActive(!document.hidden && entry.isIntersecting && entry.intersectionRatio >= 0.1);
-        }
-      });
-    }, { rootMargin: "-64px 0px -64px 0px", threshold: [0, 0.1] })
-    : null;
 
   window.watchTileMotion = (trigger, callbacks) => {
-    if (!trigger || reducedMotion) return;
+    if (!trigger || reducedMotion || touchMotion.matches) return;
     let active = false;
     const setActive = (next, event) => {
       if (active === next) return;
@@ -413,20 +402,15 @@
     trigger.addEventListener("pointerleave", leavePointer);
     trigger.addEventListener("pointercancel", leavePointer);
     trigger.addEventListener("focus", () => {
-      if (trigger.matches(":focus-visible")) setActive(true);
+      if (!touchMotion.matches && trigger.matches(":focus-visible")) setActive(true);
     });
     trigger.addEventListener("blur", () => {
       if (!touchMotion.matches) setActive(false);
     });
-    if (touchMotion.matches) tileObserver?.observe(trigger);
   };
 
   function refreshTileObservers() {
-    tileObserver?.disconnect();
-    tileWatchers.forEach((watcher, trigger) => {
-      watcher.setActive(false);
-      if (touchMotion.matches && !document.hidden) tileObserver?.observe(trigger);
-    });
+    tileWatchers.forEach((watcher) => watcher.setActive(false));
   }
   touchMotion.addEventListener("change", refreshTileObservers);
   document.addEventListener("visibilitychange", refreshTileObservers);

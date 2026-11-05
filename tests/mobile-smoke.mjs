@@ -2,7 +2,7 @@
 // Run with: node tests/mobile-smoke.mjs
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -81,11 +81,24 @@ try {
   };
   await send("Page.enable");
   await send("Runtime.enable");
+  await send("Page.addScriptToEvaluateOnNewDocument", { source: `
+    window.backgroundFrames = 0;
+    for (const type of [window.WebGLRenderingContext, window.WebGL2RenderingContext]) {
+      if (!type) continue;
+      const draw = type.prototype.drawArrays;
+      type.prototype.drawArrays = function(...args) {
+        if (this.canvas.closest("#field")) window.backgroundFrames++;
+        return draw.apply(this, args);
+      };
+    }
+  ` });
   await viewport(390);
   await send("Page.navigate", { url: `${base}/` });
   await until('!!window.watchTileMotion && !!document.querySelector("[data-glyph=projects] canvas")');
   await until('!document.documentElement.classList.contains("is-loading")');
   assert(await evaluate('matchMedia("(pointer:coarse)").matches'), "Touch emulation must be active");
+  const screenshot = await send("Page.captureScreenshot", { format: "png" });
+  await writeFile("generated-artifacts/mobile-home.png", Buffer.from(screenshot.data, "base64"));
 
   // All footer text stays on a single line without horizontal page overflow.
   for (const width of [320, 360, 390, 430, 600, 601, 768, 900]) {
@@ -102,16 +115,23 @@ try {
   }
   await viewport(390);
   await center('a.card[href="about.html"]');
-  await until('document.querySelector("a.card[href=\\"about.html\\"]").classList.contains("is-motion-active")');
   const hand = await evaluate('document.querySelector("[data-glyph=about]").innerHTML');
   await sleep(250);
-  assert.notEqual(await evaluate('document.querySelector("[data-glyph=about]").innerHTML'), hand, "Scroll alone should animate the tile");
+  assert.equal(await evaluate('document.querySelector("[data-glyph=about]").innerHTML'), hand, "Mobile tiles must stay still");
+  assert(!(await evaluate('!!document.querySelector(".is-motion-active")')), "Scrolling must not activate tiles");
   await center(".card-feature");
-  await until('document.querySelector(".card-feature").classList.contains("is-motion-active")');
-  assert(!(await evaluate('document.querySelector("a.card[href=\\"about.html\\"]").classList.contains("is-motion-active")')), "Offscreen tile should deactivate");
   const rocket = await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform');
   await sleep(250);
-  assert.notEqual(await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform'), rocket);
+  assert.equal(await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform'), rocket);
+  const background = await evaluate(`(() => {
+    const c=document.querySelector("#field canvas"), v=document.querySelector("body > video");
+    return {pixels: c.width*c.height, time: v.currentTime, frames: window.backgroundFrames, ink: document.documentElement.classList.contains("ink-live")};
+  })()`);
+  assert(background.pixels <= 264000, `Mobile background pixel budget: ${background.pixels}`);
+  assert.equal(background.ink, false, "Mobile should not encode animated text masks");
+  await sleep(400);
+  assert(await evaluate(`document.querySelector("body > video").currentTime > ${background.time}`), "Background must keep playing");
+  assert(await evaluate(`window.backgroundFrames > ${background.frames}`), "Background shader must keep rendering");
 
   // A real touch swipe scrolls instead of navigating.
   const before = await evaluate("scrollY");
@@ -140,7 +160,7 @@ try {
   await sleep(80);
   await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await until('location.pathname.endsWith("/about.html")');
-  console.log("PASS: mobile footer widths, scroll animations, offscreen reset, rocket motion, swipe and tap navigation");
+  console.log("PASS: mobile footer, static tiles, animated low-resolution background, swipe and tap navigation");
 
   assert.deepEqual(errors, [], "No uncaught browser exceptions");
 } finally {

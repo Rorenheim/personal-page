@@ -4,9 +4,10 @@ const host = document.getElementById("field");
 if (!host) throw new Error("Missing #field");
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobile = window.matchMedia("(hover: none), (pointer: coarse)").matches;
 
 const FIELD = "#e7e7e7";
-const HEIGHT = 420;
+const HEIGHT = mobile ? 240 : 420;
 const FRAME_MS = 1000 / 30;
 const TAU = Math.PI * 2;
 
@@ -115,6 +116,11 @@ poster.addEventListener("load", () => {
 
   // Capping the step keeps shapes from jumping after the tab was hidden.
   const loop = (now) => {
+    if (mobile && document.hidden) {
+      last = now;
+      requestAnimationFrame(loop);
+      return;
+    }
     const step = now - last;
     if (step >= FRAME_MS) {
       last = now;

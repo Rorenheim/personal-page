@@ -2,6 +2,7 @@
   const items = document.querySelectorAll(".tenet");
   if (!items.length || !("IntersectionObserver" in window)) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (window.matchMedia("(hover: none), (pointer: coarse)").matches) return;
 
   document.documentElement.classList.add("reveal-ready");
 

@@ -481,6 +481,13 @@ a.card.is-light.is-motion-active { background: #f4f4f4; }
   a.card.is-light:hover { background: #f4f4f4; }
 }
 
+@media (hover: none), (pointer: coarse) {
+  /* Browser toolbar changes must not resize/reallocate the background on scroll. */
+  #field { height: 100lvh; bottom: auto; }
+  /* Plain text avoids per-frame image encoding and fixed text-mask repainting. */
+  body:not(.page) #field { opacity: 0.35; }
+}
+
 @media (max-width: 900px) {
   .hero { padding: 22vh 20px 64px; min-height: 0; }
   .lede { font-size: 18px; }

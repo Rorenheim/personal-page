@@ -1,1 +1,2 @@
 - [Touch browser checks](touch-browser-checks.md) — use raw touch events for headless Chromium gesture checks.
+- [Mobile motion scope](mobile-performance.md) — no mobile scroll-triggered animations; keep background animated and desktop unchanged.

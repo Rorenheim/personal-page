@@ -46,6 +46,7 @@ function placeInk() {
 }
 
 function updateInk(source, sourceWidth, sourceHeight) {
+  if (touchMotion.matches) return;
   if (!sourceWidth || !sourceHeight) return;
   const width = ink.width;
   const height = ink.height;
@@ -101,18 +102,20 @@ function updateInk(source, sourceWidth, sourceHeight) {
 }
 
 resizeInk();
-window.addEventListener("resize", () => {
-  resizeInk();
-  placeInk();
-});
-let inkScrollFrame = 0;
-window.addEventListener("scroll", () => {
-  if (inkScrollFrame) return;
-  inkScrollFrame = requestAnimationFrame(() => {
-    inkScrollFrame = 0;
+if (!touchMotion.matches) {
+  window.addEventListener("resize", () => {
+    resizeInk();
     placeInk();
   });
-}, { passive: true });
+  let inkScrollFrame = 0;
+  window.addEventListener("scroll", () => {
+    if (inkScrollFrame) return;
+    inkScrollFrame = requestAnimationFrame(() => {
+      inkScrollFrame = 0;
+      placeInk();
+    });
+  }, { passive: true });
+}
 
 const poster = new Image();
 poster.decoding = "async";
@@ -142,18 +145,27 @@ function whenVideo() {
 function boot() {
   const glass = mountGlass(host, seed);
   let lastPaint = -Infinity;
-  let lastInk = -Infinity;
+  const mobileFrame = touchMotion.matches ? document.createElement("canvas") : null;
+  const mobileContext = mobileFrame?.getContext("2d", { alpha: false });
 
   const upload = (now) => {
     if (video.readyState < 2) return;
-    if (document.hidden || (touchMotion.matches && now - lastPaint < 1000 / 30)) return;
+    if (document.hidden || (touchMotion.matches && now - lastPaint < 1000 / 30 - 1)) return;
     lastPaint = now;
-    glass.draw(video, video.videoWidth, video.videoHeight);
-    // The ink mask does pixel sampling and PNG encoding; it need not run at
-    // video frame rate on touch devices while the browser is also scrolling.
-    if (!touchMotion.matches || now - lastInk >= 1000 / 15) {
+    if (mobileContext) {
+      // Upload a small texture rather than a full-resolution video every frame.
+      const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+      const width = Math.max(1, Math.round(video.videoWidth * scale));
+      const height = Math.max(1, Math.round(video.videoHeight * scale));
+      if (mobileFrame.width !== width || mobileFrame.height !== height) {
+        mobileFrame.width = width;
+        mobileFrame.height = height;
+      }
+      mobileContext.drawImage(video, 0, 0, width, height);
+      glass.draw(mobileFrame, width, height);
+    } else {
+      glass.draw(video, video.videoWidth, video.videoHeight);
       updateInk(video, video.videoWidth, video.videoHeight);
-      lastInk = now;
     }
   };
 

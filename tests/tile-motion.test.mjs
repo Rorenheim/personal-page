@@ -59,15 +59,10 @@ test("desktop mouse hover starts and stops the existing animation", () => {
   assert.deepEqual(tile.state, { active: false, enters: 1, leaves: 1 });
 });
 
-test("touch pointer events do not emulate hover; viewport visibility animates", () => {
+test("touch devices register no hover, focus, or scroll animation triggers", () => {
   const tile = setup({ touch: true });
-  tile.handlers.pointerenter({ pointerType: "touch" });
-  assert.equal(tile.state.active, false);
-  tile.intersect(true);
-  tile.intersect(true);
-  assert.deepEqual(tile.state, { active: true, enters: 1, leaves: 0 });
-  tile.intersect(false);
-  assert.deepEqual(tile.state, { active: false, enters: 1, leaves: 1 });
+  assert.deepEqual(Object.keys(tile.handlers), []);
+  assert.deepEqual(tile.state, { active: false, enters: 0, leaves: 0 });
   assert.equal(tile.handlers.click, undefined, "Navigation is never intercepted");
 });
 
