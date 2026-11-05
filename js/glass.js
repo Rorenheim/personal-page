@@ -12,7 +12,7 @@ const sizing = defaultObjectSizing;
 
 // The mount only accepts a loaded <img> for its first texture; later frames are
 // uploaded straight from a video or canvas through `draw`.
-export function mountGlass(host, poster) {
+export function mountGlass(host, poster, { fastStart = false } = {}) {
   const mobile = window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const mount = new ShaderMount(
     host,
@@ -95,6 +95,10 @@ export function mountGlass(host, poster) {
   // Resolves once the program is linked and a full-size warmup frame has finished on the GPU.
   const compiled = mount.whenReady().then(async (ok) => {
     if (!ok) return false;
+    if (fastStart) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      return true;
+    }
     const started = performance.now();
     const fullSize = () => mobile
       ? mount.canvasElement.width > 0 && mount.canvasElement.height > 0

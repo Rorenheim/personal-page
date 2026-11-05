@@ -45,6 +45,9 @@ Use the original procedural SVG/canvas tile animations and live subpage glass
 background, not prebaked animation clips. The user requested this restoration
 using the uploaded original scripts. Keep the existing mobile scroll safeguards,
 compact footer, and Play rendering optimizations.
+Subpage glass should show its 2D canvas fallback until the first live WebGL
+frame is drawn, and must not wait on GPU-idle before that first frame. Keep the
+homepage shader on its existing startup path.
 
 The homepage preloads the shared subpage shader module and warms subpage HTML,
 shared page assets, and the first project carousel images during idle time.

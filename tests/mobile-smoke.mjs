@@ -139,14 +139,13 @@ try {
   await center('a.card[href="about.html"]');
   const hand = await evaluate('[...document.querySelectorAll("[data-glyph=about] circle")].map((c) => c.getAttribute("cx") + c.getAttribute("cy") + c.getAttribute("r")).join()');
   await sleep(400);
-  assert(await evaluate('document.querySelector(\'a.card[href="about.html"]\').classList.contains("is-motion-active")'), "A tile on screen plays");
-  assert.notEqual(await evaluate('[...document.querySelectorAll("[data-glyph=about] circle")].map((c) => c.getAttribute("cx") + c.getAttribute("cy") + c.getAttribute("r")).join()'), hand, "The visible hand waves");
+  assert(!(await evaluate('document.querySelector(\'a.card[href="about.html"]\').classList.contains("is-motion-active")')), "Scrolling a tile into view does not start motion");
+  assert.equal(await evaluate('[...document.querySelectorAll("[data-glyph=about] circle")].map((c) => c.getAttribute("cx") + c.getAttribute("cy") + c.getAttribute("r")).join()'), hand, "The hand stays still on mobile scroll");
   assert(!(await evaluate('document.querySelector(\'a.card[href="books.html"]\').classList.contains("is-motion-active")')), "Offscreen tiles stay still");
   await center(".card-feature");
   const rocket = await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform');
   await sleep(400);
-  assert.notEqual(await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform'), rocket, "The visible rocket animates");
-  assert(!(await evaluate('document.querySelector(\'a.card[href="about.html"]\').classList.contains("is-motion-active")')), "A tile scrolled away stops");
+  assert.equal(await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform'), rocket, "Scrolling to the rocket does not start tile motion");
   const background = await evaluate(`(() => {
     const c=document.querySelector("#field canvas"), v=document.querySelector("body > video");
     return {pixels: c.width*c.height, time: v.currentTime, frames: window.backgroundFrames, ink: document.documentElement.classList.contains("ink-live")};
@@ -210,6 +209,8 @@ try {
   await sleep(80);
   await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await until('location.pathname.endsWith("/about.html")');
+  await until('document.querySelector("#field").paperShaderMount?.ready && document.querySelectorAll("#field canvas").length === 1');
+  assert(await evaluate("window.backgroundFrames > 0"), "The subpage shader draws on mobile");
   console.log("PASS: mobile layout, static tiles, texture reuse, Play rendering, offscreen pause/resume, animated background, swipe and tap navigation");
 
   assert.deepEqual(errors, [], "No uncaught browser exceptions");

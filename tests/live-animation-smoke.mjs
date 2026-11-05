@@ -30,8 +30,20 @@ try {
   assert.equal(await evaluate('document.querySelectorAll(".glyph img, .glyph video").length'), 0);
   assert(!(await evaluate('performance.getEntriesByType("resource").some(r=>r.name.includes("assets/animations/"))')));
   await navigate("/about.html");
-  await until('!!document.querySelector("#field canvas")');
+  await until('!!document.querySelector("#field").paperShaderMount?.ready && document.querySelectorAll("#field canvas").length === 1');
   assert.equal(await evaluate('document.querySelectorAll("#field video").length'), 0);
+  const shaderPixel = await evaluate(`(() => {
+    const mount = document.querySelector("#field").paperShaderMount;
+    mount.render(performance.now());
+    const pixel = new Uint8Array(4);
+    mount.gl.readPixels(
+      Math.floor(mount.canvasElement.width / 2),
+      Math.floor(mount.canvasElement.height / 2),
+      1, 1, mount.gl.RGBA, mount.gl.UNSIGNED_BYTE, pixel
+    );
+    return [...pixel];
+  })()`);
+  assert(shaderPixel[3] > 0, `Subpage shader must draw a visible pixel: ${shaderPixel}`);
   assert(!(await evaluate('performance.getEntriesByType("resource").some(r=>r.name.includes("prebaked"))')));
   assert.deepEqual(errors, []);
   console.log("PASS: live SVG tile hover animations, rocket canvas motion, live subpage background, no prebaked media requests");

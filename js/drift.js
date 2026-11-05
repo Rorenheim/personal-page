@@ -180,17 +180,46 @@ function renderSweep(seconds, w, h) {
 
 resize();
 render(0);
+canvas.className = "drift-fallback";
+host.append(canvas);
+
 const poster = new Image();
 poster.decoding = "async";
-poster.src = canvas.toDataURL("image/png");
 poster.addEventListener("load", async () => {
-  const { draw, compiled } = mountGlass(host, poster);
-  await compiled;
+  let glass;
+  try {
+    glass = mountGlass(host, poster, { fastStart: true });
+  } catch (error) {
+    if (poster.src.startsWith("blob:")) URL.revokeObjectURL(poster.src);
+    console.warn("Subpage glass background is unavailable; keeping its static fallback.", error);
+    return;
+  }
+  const { draw, compiled } = glass;
+  let ready = false;
+  try {
+    ready = await compiled;
+  } catch (error) {
+    console.error("Subpage glass background could not finish initializing; keeping its static fallback.", error);
+  } finally {
+    if (poster.src.startsWith("blob:")) URL.revokeObjectURL(poster.src);
+  }
+  if (!ready) {
+    console.error("Subpage glass background failed to initialize; keeping its static fallback.");
+    return;
+  }
   let elapsed = 0;
   let last = performance.now();
+  let fallbackVisible = true;
   const paint = () => {
     render(elapsed / 1000);
-    draw(canvas, canvas.width, canvas.height);
+    draw(canvas, canvas.width, canvas.height).then(() => {
+      if (fallbackVisible) {
+        fallbackVisible = false;
+        canvas.remove();
+      }
+    }).catch((error) => {
+      console.error("Subpage glass background could not draw.", error);
+    });
   };
   window.addEventListener("resize", () => {
     resize();
@@ -214,3 +243,20 @@ poster.addEventListener("load", async () => {
   };
   requestAnimationFrame(loop);
 }, { once: true });
+
+poster.addEventListener("error", () => {
+  if (poster.src.startsWith("blob:")) URL.revokeObjectURL(poster.src);
+  console.warn("Subpage glass background image could not be prepared; keeping its static fallback.");
+}, { once: true });
+
+if (typeof canvas.toBlob === "function") {
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      console.error("Subpage glass background image could not be encoded; keeping its static fallback.");
+      return;
+    }
+    poster.src = URL.createObjectURL(blob);
+  }, "image/png");
+} else {
+  poster.src = canvas.toDataURL("image/png");
+}
