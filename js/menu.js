@@ -27,6 +27,12 @@
   const current = (href) => (href === here ? ' aria-current="page"' : "");
   const external = (href) => (href.startsWith("http") ? ' rel="noreferrer"' : "");
 
+  const back = document.createElement("a");
+  back.className = "back-home";
+  back.href = "index.html";
+  back.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10H4M9 5 4 10l5 5"/></svg><span>Back</span>';
+  bar.append(back);
+
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "menu-toggle";
@@ -88,6 +94,7 @@
   const isOpen = () => root.classList.contains("menu-open");
 
   toggle.addEventListener("click", () => (isOpen() ? close() : open()));
+  back.addEventListener("click", (event) => restoreHome(event, back.href));
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && isOpen()) {
@@ -98,27 +105,7 @@
 
   menu.addEventListener("click", (event) => {
     const link = event.target.closest("a");
-    if (link && isHome(link.href)) {
-      const nav = window.navigation;
-      const currentIndex = nav?.currentEntry?.index;
-      const cachedHome = nav?.entries?.().filter((entry) =>
-        entry.index < currentIndex && isHome(entry.url)
-      ).at(-1);
-      if (cachedHome) {
-        event.preventDefault();
-        try {
-          nav.traverseTo(cachedHome.key).committed.catch(() => location.assign(link.href));
-        } catch {
-          location.assign(link.href);
-        }
-        return;
-      }
-      if (isHome(document.referrer)) {
-        event.preventDefault();
-        history.back();
-        return;
-      }
-    }
+    if (link && isHome(link.href) && restoreHome(event, link.href)) return;
     if (link && link.getAttribute("aria-current") === "page") {
       event.preventDefault();
       close();
@@ -129,6 +116,29 @@
   window.addEventListener("pageshow", () => {
     if (isOpen()) close({ restoreFocus: false });
   });
+
+  function restoreHome(event, href) {
+    const nav = window.navigation;
+    const currentIndex = nav?.currentEntry?.index;
+    const cachedHome = nav?.entries?.().filter((entry) =>
+      entry.index < currentIndex && isHome(entry.url)
+    ).at(-1);
+    if (cachedHome) {
+      event.preventDefault();
+      try {
+        nav.traverseTo(cachedHome.key).committed.catch(() => location.assign(href));
+      } catch {
+        location.assign(href);
+      }
+      return true;
+    }
+    if (isHome(document.referrer)) {
+      event.preventDefault();
+      history.back();
+      return true;
+    }
+    return false;
+  }
 
   function isHome(value) {
     try {

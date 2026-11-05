@@ -44,6 +44,10 @@ html.is-loading { overflow: hidden; }
   pointer-events: none;
 }
 
+.theme-dark #loader { background: #181818; }
+
+.theme-dark .loader-rule { background: #f2f2f2; }
+
 .loader-rule {
   width: 44px;
   height: 1px;

@@ -1,12 +1,11 @@
+import { ShaderMount } from "../vendor/paper-shaders/shader-mount.js?v=2";
+import { ShaderFitOptions, defaultObjectSizing } from "../vendor/paper-shaders/shader-sizing.js";
 import {
   GlassDistortionShapes,
   GlassGridShapes,
-  ShaderFitOptions,
-  ShaderMount,
-  defaultObjectSizing,
   flutedGlassFragmentShader,
-  getShaderColorFromString,
-} from "../vendor/paper-shaders/index.js";
+} from "../vendor/paper-shaders/shaders/fluted-glass.js?v=5";
+import { getShaderColorFromString } from "../vendor/paper-shaders/get-shader-color-from-string.js";
 
 const sizing = defaultObjectSizing;
 

@@ -30,9 +30,17 @@
     document.head.append(link);
   }
 
+  function addModulePreload(href) {
+    const link = document.createElement("link");
+    link.rel = "modulepreload";
+    link.href = href;
+    document.head.append(link);
+  }
+
   function warmNextPages() {
     documents.forEach((path) => addPrefetch(path));
     resources.forEach(([path, as]) => addPrefetch(path, as));
+    addModulePreload("js/drift.js");
   }
 
   function schedule() {

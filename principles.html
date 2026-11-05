@@ -21,10 +21,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,600&family=Doto:ROND,wght@100,600&family=Inter:wght@500&family=Space+Grotesk:wght@500&display=swap" rel="stylesheet">
+  <script>document.documentElement.classList.add("is-loading")</script>
+  <link rel="modulepreload" href="js/drift.js">
+  <script type="speculationrules">
+  {
+    "prerender": [{
+      "where": { "href_matches": "/*" },
+      "eagerness": "moderate"
+    }]
+  }
+  </script>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/pages.css">
 </head>
 <body class="page page-principles">
+  <div id="loader" data-hold="field" role="status" aria-label="Loading">
+    <span class="loader-rule"></span>
+  </div>
   <div id="field" aria-hidden="true"></div>
   <header class="bar"></header>
 
@@ -118,6 +131,7 @@
     <time class="ink now" id="now" datetime=""><span class="ink-rim" aria-hidden="true"></span><span class="ink-face">––</span></time>
   </footer>
 
+  <script src="js/loader.js"></script>
   <script type="module" src="js/drift.js"></script>
   <script src="js/menu.js"></script>
   <script src="js/reveal.js"></script>

@@ -180,83 +180,99 @@ function renderSweep(seconds, w, h) {
 
 resize();
 render(0);
-canvas.className = "drift-fallback";
-host.append(canvas);
 
-const poster = new Image();
-poster.decoding = "async";
-poster.addEventListener("load", async () => {
+let fieldReady = false;
+
+function markFieldReady() {
+  if (fieldReady) return;
+  fieldReady = true;
+  document.dispatchEvent(new Event("field-ready"));
+}
+
+function useFallback() {
+  if (!canvas.isConnected) {
+    canvas.className = "drift-fallback";
+    host.append(canvas);
+  }
+  markFieldReady();
+}
+
+// A 1×1 image lets the shader compile while the first frame stays on the off-screen canvas.
+// The canvas is uploaded directly, so the page never shows the unshaded drawing first.
+const seed = new Image();
+seed.decoding = "async";
+seed.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+function boot() {
   let glass;
   try {
-    glass = mountGlass(host, poster, { fastStart: true });
+    glass = mountGlass(host, seed, { fastStart: true });
   } catch (error) {
-    if (poster.src.startsWith("blob:")) URL.revokeObjectURL(poster.src);
     console.warn("Subpage glass background is unavailable; keeping its static fallback.", error);
+    useFallback();
     return;
   }
-  const { draw, compiled } = glass;
-  let ready = false;
-  try {
-    ready = await compiled;
-  } catch (error) {
-    console.error("Subpage glass background could not finish initializing; keeping its static fallback.", error);
-  } finally {
-    if (poster.src.startsWith("blob:")) URL.revokeObjectURL(poster.src);
-  }
-  if (!ready) {
-    console.error("Subpage glass background failed to initialize; keeping its static fallback.");
-    return;
-  }
-  let elapsed = 0;
-  let last = performance.now();
-  let fallbackVisible = true;
-  const paint = () => {
-    render(elapsed / 1000);
-    draw(canvas, canvas.width, canvas.height).then(() => {
-      if (fallbackVisible) {
-        fallbackVisible = false;
-        canvas.remove();
-      }
-    }).catch((error) => {
-      console.error("Subpage glass background could not draw.", error);
-    });
-  };
-  window.addEventListener("resize", () => {
-    resize();
-    paint();
-  });
-  paint();
-  if (reducedMotion) return;
-  const loop = (now) => {
-    if (mobile && document.hidden) {
-      last = now;
-      requestAnimationFrame(loop);
+  const { draw, compiled, mount } = glass;
+
+  (async () => {
+    let ready = false;
+    try {
+      ready = await compiled;
+    } catch (error) {
+      console.error("Subpage glass background could not finish initializing; keeping its static fallback.", error);
+    }
+    if (!ready) {
+      console.error("Subpage glass background failed to initialize; keeping its static fallback.");
+      useFallback();
       return;
     }
-    const step = now - last;
-    if (step >= FRAME_MS) {
-      last = now;
-      elapsed += Math.min(step, 100);
+
+    const sizingStarted = performance.now();
+    while (mount.canvasElement.width === 0 && performance.now() - sizingStarted < 1500) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+
+    let elapsed = 0;
+    let last = performance.now();
+    let announced = false;
+    const paint = () => {
+      render(elapsed / 1000);
+      draw(canvas, canvas.width, canvas.height).then(() => {
+        if (announced) return;
+        announced = true;
+        markFieldReady();
+      }).catch((error) => {
+        console.error("Subpage glass background could not draw.", error);
+        if (!announced) useFallback();
+      });
+    };
+    window.addEventListener("resize", () => {
+      resize();
       paint();
-    }
+    });
+    paint();
+    if (reducedMotion) return;
+    const loop = (now) => {
+      if (mobile && document.hidden) {
+        last = now;
+        requestAnimationFrame(loop);
+        return;
+      }
+      const step = now - last;
+      if (step >= FRAME_MS) {
+        last = now;
+        elapsed += Math.min(step, 100);
+        paint();
+      }
+      requestAnimationFrame(loop);
+    };
     requestAnimationFrame(loop);
-  };
-  requestAnimationFrame(loop);
-}, { once: true });
-
-poster.addEventListener("error", () => {
-  if (poster.src.startsWith("blob:")) URL.revokeObjectURL(poster.src);
-  console.warn("Subpage glass background image could not be prepared; keeping its static fallback.");
-}, { once: true });
-
-if (typeof canvas.toBlob === "function") {
-  canvas.toBlob((blob) => {
-    if (!blob) {
-      console.error("Subpage glass background image could not be encoded; keeping its static fallback.");
-      return;
-    }
-    poster.src = URL.createObjectURL(blob);
-  }, "image/png");
-} else {
-  poster.src = canvas.toDataURL("image/png");
+  })();
 }
+
+if (seed.complete && seed.naturalWidth) boot();
+else seed.addEventListener("load", boot, { once: true });
+seed.addEventListener("error", () => {
+  console.warn("Subpage glass background image could not be prepared; keeping its static fallback.");
+  useFallback();
+}, { once: true });

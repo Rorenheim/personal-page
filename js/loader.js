@@ -3,10 +3,11 @@
   if (!loader) return;
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fieldOnly = loader.dataset.hold === "field";
   const start = performance.now();
-  const minHold = reduced ? 0 : 700;
+  const minHold = fieldOnly || reduced ? 0 : 700;
   const fontsReady = document.fonts ? document.fonts.ready : Promise.resolve();
-  const pageReady = new Promise((resolve) => {
+  const pageReady = fieldOnly ? Promise.resolve() : new Promise((resolve) => {
     if (document.readyState === "complete") resolve();
     else window.addEventListener("load", () => resolve(), { once: true });
   });
@@ -36,5 +37,5 @@
   window.setTimeout(() => {
     fieldReady = true;
     reveal();
-  }, 20000);
+  }, fieldOnly ? 4000 : 20000);
 })();

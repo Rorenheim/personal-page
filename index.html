@@ -78,7 +78,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,600&family=Doto:ROND,wght@100,600&family=Inter:wght@500&family=Space+Grotesk:wght@500&display=swap" rel="stylesheet">
-  <link rel="modulepreload" href="js/drift.js">
+  <link rel="modulepreload" href="js/fluted.js">
+  <script type="speculationrules">
+  {
+    "prerender": [{
+      "where": { "href_matches": "/*" },
+      "eagerness": "moderate"
+    }]
+  }
+  </script>
   <link rel="preload" as="image" href="assets/silhouette.png">
   <link rel="preload" as="video" href="Silhouette%20calm%20background%20loop%20_40%20s_.mp4" type="video/mp4">
   <link rel="stylesheet" href="css/styles.css">
