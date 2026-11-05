@@ -45,3 +45,10 @@ Use the original procedural SVG/canvas tile animations and live subpage glass
 background, not prebaked animation clips. The user requested this restoration
 using the uploaded original scripts. Keep the existing mobile scroll safeguards,
 compact footer, and Play rendering optimizations.
+
+The homepage preloads the shared subpage shader module and warms subpage HTML,
+shared page assets, and the first project carousel images during idle time.
+Keep normal same-origin history navigation intact so browsers can restore the
+homepage from the back/forward cache. The subpage Home menu link traverses to an
+existing homepage history entry when possible, falling back to browser history
+when the subpage was opened directly from Home.

@@ -98,6 +98,27 @@
 
   menu.addEventListener("click", (event) => {
     const link = event.target.closest("a");
+    if (link && isHome(link.href)) {
+      const nav = window.navigation;
+      const currentIndex = nav?.currentEntry?.index;
+      const cachedHome = nav?.entries?.().filter((entry) =>
+        entry.index < currentIndex && isHome(entry.url)
+      ).at(-1);
+      if (cachedHome) {
+        event.preventDefault();
+        try {
+          nav.traverseTo(cachedHome.key).committed.catch(() => location.assign(link.href));
+        } catch {
+          location.assign(link.href);
+        }
+        return;
+      }
+      if (isHome(document.referrer)) {
+        event.preventDefault();
+        history.back();
+        return;
+      }
+    }
     if (link && link.getAttribute("aria-current") === "page") {
       event.preventDefault();
       close();
@@ -108,4 +129,14 @@
   window.addEventListener("pageshow", () => {
     if (isOpen()) close({ restoreFocus: false });
   });
+
+  function isHome(value) {
+    try {
+      const url = new URL(value, location.href);
+      return url.origin === location.origin &&
+        (url.pathname === "/" || url.pathname.endsWith("/index.html"));
+    } catch {
+      return false;
+    }
+  }
 })();
