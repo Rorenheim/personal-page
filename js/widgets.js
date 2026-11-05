@@ -651,6 +651,9 @@
   };
 
   document.querySelectorAll("[data-glyph]").forEach((host) => {
+    // Other tile motions are decoded from offline-rendered media. Keep the
+    // pointer-driven Blog illustration and interactive Play glyph procedural.
+    if (!["blog", "invader"].includes(host.dataset.glyph)) return;
     const motion = motions[host.dataset.glyph];
     if (!motion || !host.querySelector("svg")) return;
     const trigger = host.closest(".card-links a") || host.closest(".card");

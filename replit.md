@@ -38,3 +38,20 @@ Never apply immutable caching to the original, unversioned media filenames.
 Run the build after changing sources and publish again to update the CDN.
 Actual CDN headers and video range behavior must be checked against the published
 URL after the first publish; the Python preview does not implement those headers.
+
+## Prebaked animation media
+
+Tile illustrations use offline-rendered clips, except the pointer-driven Blog
+illustration and interactive Play game. The Projects tile uses a small native
+video with screen blending; the other animated tiles use transparent WebP clips.
+Touch devices retain still tiles without scroll-triggered animation.
+
+Subpage backgrounds use native muted looping videos with portrait and landscape
+variants and still posters for reduced motion. The index background is unchanged.
+Explicit media URLs in `js/prebaked-media.js` are fingerprinted by the CDN build.
+
+To regenerate, run `node scripts/bake-animations.mjs` with Node 22+, Chromium and
+ffmpeg available while the preview server is running. Original procedural sources
+are retained in `scripts/animation-sources/` for offline rendering only. Temporary
+frames go in the ignored `generated-artifacts/animation-bake/` directory.
+Do not use `--snapshot` again; it is only for capturing the original sources once.

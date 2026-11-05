@@ -75,6 +75,13 @@ a { color: inherit; }
   background: #e7e7e7;
 }
 
+#field .baked-drift {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .site {
   position: relative;
 }
@@ -288,6 +295,32 @@ a.card.is-light.is-motion-active { background: #f4f4f4; }
   overflow: visible;
   fill: currentColor;
 }
+
+.glyph .baked-motion {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: none;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.glyph.has-baked-motion .baked-motion { opacity: 1; }
+.glyph.has-baked-motion > svg,
+.glyph.has-baked-motion > .baked-project-poster { visibility: hidden; }
+
+.glyph[data-glyph="projects"] .baked-motion,
+.glyph .baked-project-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: none;
+}
+
+.glyph[data-glyph="projects"] video.baked-motion { mix-blend-mode: screen; }
 
 .glyph[data-glyph="work"] svg { width: min(232px, 64%); }
 
