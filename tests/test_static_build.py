@@ -50,6 +50,30 @@ class StaticBuildTests(unittest.TestCase):
         self.assertNotEqual(first["assets/poster.png"], updated["assets/poster.png"])
         self.assertFalse((self.output / first["assets/poster.png"]).exists())
 
+    def test_publishes_crawler_files_at_site_root(self):
+        (self.root / "robots.txt").write_text("Sitemap: https://kalaba.me/sitemap.xml\n")
+        (self.root / "llms.txt").write_text("# Paul Kalaba\n")
+        builder.build(self.root, self.output)
+        self.assertEqual(
+            (self.output / "robots.txt").read_text(),
+            "Sitemap: https://kalaba.me/sitemap.xml\n",
+        )
+        self.assertTrue((self.output / "llms.txt").is_file())
+        self.assertFalse((self.output / "sitemap.xml").exists())
+
+    def test_keeps_icon_urls_stable(self):
+        (self.root / "icons").mkdir()
+        (self.root / "icons/icon-192.png").write_bytes(b"icon")
+        (self.root / "favicon.ico").write_bytes(b"ico")
+        (self.root / "index.html").write_text(
+            '<link rel="icon" href="favicon.ico"><link rel="icon" href="icons/icon-192.png">'
+        )
+        mapping = builder.build(self.root, self.output)
+        self.assertNotIn("favicon.ico", mapping)
+        self.assertEqual((self.output / "favicon.ico").read_bytes(), b"ico")
+        self.assertEqual((self.output / "icons/icon-192.png").read_bytes(), b"icon")
+        self.assertIn('href="favicon.ico"', (self.output / "index.html").read_text())
+
     def test_refuses_output_outside_build_directory(self):
         with self.assertRaises(ValueError):
             builder.build(self.root, self.root)

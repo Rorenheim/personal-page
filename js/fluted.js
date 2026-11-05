@@ -1,4 +1,5 @@
 import { mountGlass } from "./glass.js";
+import { drawInkSource, inkMask, sameBytes } from "./ink-mask.js";
 
 const host = document.getElementById("field");
 if (!host) throw new Error("Missing #field");
@@ -22,14 +23,27 @@ document.body.append(video);
 const ink = document.createElement("canvas");
 const inkCtx = ink.getContext("2d", { willReadFrequently: true });
 const inkElements = Array.from(document.querySelectorAll(".ink"));
+const inkPositions = new Map();
+// Ink text within a viewport of the screen. Offscreen text needs no new mask.
+const inkNearby = new Set("IntersectionObserver" in window ? [] : inkElements);
 let inkPositionsDirty = true;
+let inkLive = false;
+let inkStale = false;
 let inkValues = new Uint8Array(0);
 let inkHorizontal = new Uint8Array(0);
-
-function smoothstep(edge0, edge1, value) {
-  const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
-  return t * t * (3 - 2 * t);
-}
+let inkPrevious = null;
+let inkShown = "";
+const inkBlobs = [];
+// "check" until the worker has matched this page's mask exactly, then "on".
+// "off" keeps every frame on the main thread.
+let inkOffload = "off";
+let inkWorker = null;
+let inkJob = 0;
+let inkJobCount = 0;
+let inkChecks = 0;
+let inkExpected = null;
+let inkFrame = null;
+let inkQueued = null;
 
 function resizeInk() {
   const aspect = window.innerWidth / Math.max(1, window.innerHeight);
@@ -37,18 +51,34 @@ function resizeInk() {
   ink.width = Math.max(1, Math.round(140 * aspect));
   inkValues = new Uint8Array(ink.width * ink.height);
   inkHorizontal = new Uint8Array(inkValues.length);
+  inkPrevious = null;
   inkPositionsDirty = true;
 }
 
+// Page offsets are measured only after layout changes; scrolling just shifts them.
 function placeInk() {
-  if (!inkPositionsDirty) return;
-  inkPositionsDirty = false;
-  // Read all positions before writing styles to avoid layout thrashing on scroll.
-  const positions = inkElements.map((el) => {
-    const rect = el.getBoundingClientRect();
-    return { el, x: rect.left, y: rect.top };
-  });
-  positions.forEach(({ el, x, y }) => {
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
+  if (inkPositionsDirty) {
+    inkPositionsDirty = false;
+    inkElements.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      const previous = inkPositions.get(el);
+      inkPositions.set(el, {
+        left: rect.left + scrollX,
+        top: rect.top + scrollY,
+        x: previous ? previous.x : NaN,
+        y: previous ? previous.y : NaN,
+      });
+    });
+  }
+  inkPositions.forEach((position, el) => {
+    if (!inkNearby.has(el)) return;
+    const x = position.left - scrollX;
+    const y = position.top - scrollY;
+    if (x === position.x && y === position.y) return;
+    position.x = x;
+    position.y = y;
     el.style.setProperty("--ink-x", `${x}px`);
     el.style.setProperty("--ink-y", `${y}px`);
   });
@@ -57,75 +87,147 @@ function placeInk() {
 function updateInk(source, sourceWidth, sourceHeight) {
   if (touchMotion.matches) return;
   if (!sourceWidth || !sourceHeight) return;
+  if (!inkNearby.size) {
+    inkStale = true;
+    return;
+  }
+  inkStale = false;
+  if (inkOffload === "on") {
+    if (inkJob) inkQueued = [source, sourceWidth, sourceHeight];
+    else sendInkJob(source, sourceWidth, sourceHeight, false);
+    return;
+  }
+  const changed = drawInkHere(source, sourceWidth, sourceHeight);
+  if (inkOffload === "check" && !inkJob) {
+    // Same frame, same task: the worker must reproduce this mask byte for byte.
+    inkExpected = inkValues.slice();
+    sendInkJob(source, sourceWidth, sourceHeight, true);
+  }
+  if (!changed) return;
+  inkCtx.putImageData(inkFrame, 0, 0);
+  showInk(ink.toDataURL("image/png"));
+}
+
+// The main-thread path, used until the worker is verified and as the fallback.
+function drawInkHere(source, sourceWidth, sourceHeight) {
   const width = ink.width;
   const height = ink.height;
-  const scale = Math.max(width / sourceWidth, height / sourceHeight);
-  const drawWidth = sourceWidth * scale;
-  const drawHeight = sourceHeight * scale;
-  inkCtx.clearRect(0, 0, width, height);
-  inkCtx.filter = "blur(7px)";
-  inkCtx.drawImage(
-    source,
-    (width - drawWidth) / 2,
-    (height - drawHeight) / 2,
-    drawWidth,
-    drawHeight
-  );
-  inkCtx.filter = "none";
-  const frame = inkCtx.getImageData(0, 0, width, height);
-  const pixels = frame.data;
-  const values = inkValues;
-  for (let p = 0, i = 0; i < pixels.length; i += 4, p += 1) {
-    const luma = (pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722) / 255;
-    const light = smoothstep(0.28, 0.62, luma);
-    values[p] = Math.round((1 - light) * 255);
+  drawInkSource(inkCtx, source, width, height, sourceWidth, sourceHeight);
+  inkFrame = inkCtx.getImageData(0, 0, width, height);
+  inkMask(inkFrame, width, height, inkValues, inkHorizontal);
+  if (sameBytes(inkPrevious, inkValues)) return false;
+  inkPrevious = inkPrevious || new Uint8Array(inkValues.length);
+  inkPrevious.set(inkValues);
+  return true;
+}
+
+// The mask is opaque, so the new image fully covers the previous one once it
+// has loaded; keeping the previous one underneath avoids a blank frame meanwhile.
+// Set on the ink text itself: on <html> or a section, each update restyles about ten times longer.
+function showInk(url) {
+  const value = inkShown ? `url("${url}"), url("${inkShown}")` : `url("${url}")`;
+  inkElements.forEach((el) => el.style.setProperty("--ink", value));
+  inkShown = url;
+  if (url.startsWith("blob:")) inkBlobs.push(url);
+  while (inkBlobs.length > 2) URL.revokeObjectURL(inkBlobs.shift());
+  if (!inkLive) {
+    inkLive = true;
+    document.documentElement.classList.add("ink-live");
   }
-  // A separable maximum gives the same 3x3 mask without nine nested samples
-  // per pixel, and both work buffers are reused across frames.
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const p = y * width + x;
-      inkHorizontal[p] = Math.max(values[p], values[p - (x > 0 ? 1 : 0)], values[p + (x < width - 1 ? 1 : 0)]);
-    }
-  }
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const p = y * width + x;
-      values[p] = Math.max(inkHorizontal[p], inkHorizontal[p - (y > 0 ? width : 0)], inkHorizontal[p + (y < height - 1 ? width : 0)]);
-    }
-  }
-  for (let p = 0, i = 0; p < values.length; p += 1, i += 4) {
-    pixels[i] = values[p];
-    pixels[i + 1] = values[p];
-    pixels[i + 2] = values[p];
-    pixels[i + 3] = 255;
-  }
-  inkCtx.putImageData(frame, 0, 0);
-  document.documentElement.style.setProperty("--ink", `url("${ink.toDataURL("image/png")}")`);
-  document.documentElement.classList.add("ink-live");
   placeInk();
+}
+
+function sendInkJob(source, sourceWidth, sourceHeight, check) {
+  inkJobCount += 1;
+  const id = inkJobCount;
+  inkJob = id;
+  createImageBitmap(source).then((bitmap) => {
+    if (inkJob !== id || inkOffload === "off") {
+      bitmap.close();
+      return;
+    }
+    inkWorker.postMessage({
+      id, bitmap, check, sourceWidth, sourceHeight, width: ink.width, height: ink.height,
+    }, [bitmap]);
+  }, () => stopInkWorker());
+}
+
+function stopInkWorker() {
+  inkOffload = "off";
+  inkJob = 0;
+  inkQueued = null;
+  inkWorker?.terminate();
+  inkWorker = null;
+}
+
+function onInkWorkerMessage({ data }) {
+  if (data.id !== inkJob) return;
+  inkJob = 0;
+  if (data.type === "check") {
+    if (sameBytes(inkExpected, data.values)) inkOffload = "on";
+    else if (++inkChecks >= 3) stopInkWorker();
+    inkExpected = null;
+  } else if (data.type === "mask") {
+    if (inkNearby.size) showInk(URL.createObjectURL(data.blob));
+    else inkStale = true;
+  } else if (data.type === "error") {
+    stopInkWorker();
+  }
+  // A frame that arrived while the worker was busy is processed straight away.
+  if (inkQueued && inkOffload === "on") {
+    const queued = inkQueued;
+    inkQueued = null;
+    updateInk(...queued);
+  }
+}
+
+function startInkWorker() {
+  if (typeof Worker !== "function" || typeof OffscreenCanvas !== "function" || typeof createImageBitmap !== "function") return;
+  try {
+    inkWorker = new Worker(new URL("./ink-worker.js", import.meta.url), { type: "module" });
+  } catch {
+    return;
+  }
+  inkWorker.addEventListener("message", onInkWorkerMessage);
+  inkWorker.addEventListener("error", stopInkWorker);
+  inkWorker.addEventListener("messageerror", stopInkWorker);
+  inkOffload = "check";
 }
 
 resizeInk();
 if (!touchMotion.matches) {
+  startInkWorker();
   window.addEventListener("resize", () => {
     resizeInk();
     placeInk();
   });
   let inkScrollFrame = 0;
   window.addEventListener("scroll", () => {
-    inkPositionsDirty = true;
-    if (inkScrollFrame) return;
+    if (inkScrollFrame || !inkNearby.size) return;
     inkScrollFrame = requestAnimationFrame(() => {
       inkScrollFrame = 0;
       placeInk();
     });
   }, { passive: true });
   document.fonts?.ready.then(() => { inkPositionsDirty = true; });
-  const footer = document.querySelector(".colophon");
-  if (footer) {
-    new MutationObserver(() => { inkPositionsDirty = true; })
-      .observe(footer, { childList: true, subtree: true, characterData: true });
+  // Footer text changes (the clock) only move ink text when some ink element resizes.
+  if ("ResizeObserver" in window) {
+    const layoutWatch = new ResizeObserver(() => { inkPositionsDirty = true; });
+    layoutWatch.observe(document.body);
+    inkElements.forEach((el) => layoutWatch.observe(el));
+  }
+  if ("IntersectionObserver" in window) {
+    // The margin starts updates a viewport ahead so text never enters with a stale mask.
+    const nearby = new IntersectionObserver((entries) => {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (isIntersecting) inkNearby.add(target);
+        else inkNearby.delete(target);
+      });
+      if (!inkNearby.size) return;
+      placeInk();
+      if (inkStale && video.readyState >= 2) updateInk(video, video.videoWidth, video.videoHeight);
+    }, { rootMargin: "100% 0px" });
+    inkElements.forEach((el) => nearby.observe(el));
   }
 }
 

@@ -215,6 +215,9 @@ html.ink-live .ink:focus-visible {
   transition: fill 0.3s var(--ease);
 }
 
+/* Posed parts reuse their dots; they used to be rebuilt each frame and so never faded. */
+.glyph svg .is-moving .mark { transition: none; }
+
 .card:not(.card-links).is-motion-active .glyph svg .accent .mark,
 .card-links a.is-motion-active .glyph svg .accent .mark { fill: var(--accent); }
 
@@ -472,7 +475,7 @@ a.card.is-light.is-motion-active { background: #f4f4f4; }
 
 .colophon-legal a[aria-current="page"]:hover { opacity: 1; }
 
-@media (hover: hover) and (pointer: fine) {
+@media (hover: hover) and (pointer: fine) and (min-width: 901px) {
   .card:not(.card-links):hover .glyph svg .accent .mark,
   .card-links a:hover .glyph svg .accent .mark { fill: var(--accent); }
   .card:hover .glyph[data-glyph="invader"] .eye { opacity: 1; }
@@ -499,7 +502,9 @@ a.card.is-light.is-motion-active { background: #f4f4f4; }
     grid-template-columns: 1fr;
     aspect-ratio: auto;
   }
-  .card { aspect-ratio: 4 / 3.15; }
+  .card { aspect-ratio: 4 / 3.15; transition: none; }
+  .card-links a,
+  .glyph svg .mark { transition: none; }
   .row.feature > .card { aspect-ratio: 4 / 4.4; }
   .col { grid-template-rows: none; }
   .card h2 { font-size: 26px; left: 20px; bottom: 16px; }

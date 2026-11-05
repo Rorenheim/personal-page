@@ -1339,6 +1339,12 @@ html { scrollbar-color: rgba(17, 17, 17, 0.32) transparent; }
     aspect-ratio: auto;
   }
   .slide .tile { grid-area: auto !important; }
+  .carousel.is-ready .tile,
+  .carousel.is-ready .slide:not(.is-active) .tile {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
   .slide .t-name { order: 1; aspect-ratio: 2 / 1; }
   .slide .t-i1 { order: 2; aspect-ratio: 4 / 3; }
   .slide .t-desc { order: 3; container-type: normal; }

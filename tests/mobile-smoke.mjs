@@ -137,14 +137,16 @@ try {
   }
   await viewport(390);
   await center('a.card[href="about.html"]');
-  const hand = await evaluate('document.querySelector("[data-glyph=about]").innerHTML');
-  await sleep(250);
-  assert.equal(await evaluate('document.querySelector("[data-glyph=about]").innerHTML'), hand, "Mobile tiles must stay still");
-  assert(!(await evaluate('!!document.querySelector(".is-motion-active")')), "Scrolling must not activate tiles");
+  const hand = await evaluate('[...document.querySelectorAll("[data-glyph=about] circle")].map((c) => c.getAttribute("cx") + c.getAttribute("cy") + c.getAttribute("r")).join()');
+  await sleep(400);
+  assert(await evaluate('document.querySelector(\'a.card[href="about.html"]\').classList.contains("is-motion-active")'), "A tile on screen plays");
+  assert.notEqual(await evaluate('[...document.querySelectorAll("[data-glyph=about] circle")].map((c) => c.getAttribute("cx") + c.getAttribute("cy") + c.getAttribute("r")).join()'), hand, "The visible hand waves");
+  assert(!(await evaluate('document.querySelector(\'a.card[href="books.html"]\').classList.contains("is-motion-active")')), "Offscreen tiles stay still");
   await center(".card-feature");
   const rocket = await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform');
-  await sleep(250);
-  assert.equal(await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform'), rocket);
+  await sleep(400);
+  assert.notEqual(await evaluate('document.querySelector("[data-glyph=projects] canvas").style.transform'), rocket, "The visible rocket animates");
+  assert(!(await evaluate('document.querySelector(\'a.card[href="about.html"]\').classList.contains("is-motion-active")')), "A tile scrolled away stops");
   const background = await evaluate(`(() => {
     const c=document.querySelector("#field canvas"), v=document.querySelector("body > video");
     return {pixels: c.width*c.height, time: v.currentTime, frames: window.backgroundFrames, ink: document.documentElement.classList.contains("ink-live")};

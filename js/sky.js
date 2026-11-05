@@ -339,6 +339,7 @@
     const flicker = 1 + (0.06 * Math.sin(time * 29) + 0.04 * Math.sin(time * 47)) * motion;
     const length = (frame.y + frame.h * 0.7 - rocket.exit + lift) * flicker;
     const size = 1.5 * unit;
+    let fill = "";
     for (let i = 0; i < 2200; i += 1) {
       const u = rng() ** 1.2;
       const v = rng() * 2 - 1;
@@ -349,7 +350,11 @@
       const bright = (1 - u) ** 0.6 * (1 - 0.9 * v * v);
       if (rng() > bright * 1.25) continue;
       if (covered(x, y, 0)) continue;
-      ctx.fillStyle = bright < heat * 0.8 ? ACCENT : "#fff";
+      const color = bright < heat * 0.8 ? ACCENT : "#fff";
+      if (color !== fill) {
+        fill = color;
+        ctx.fillStyle = color;
+      }
       ctx.globalAlpha = Math.min(1, 0.45 + 0.55 * bright);
       ctx.fillRect(x - size / 2, y, size, size);
     }
@@ -397,10 +402,26 @@
     if (heat > 0.02) drawChurn(time);
   }
 
+  // Rebuilding the artwork allocates several full-size pixel buffers, so it only
+  // happens when something that shapes it has changed.
+  let builtFor = "";
+
   function layout() {
     const rect = host.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) return;
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const nextDpr = Math.min(window.devicePixelRatio || 1, 2);
+    let titleRight = 0.44;
+    let titleTop = 0.86;
+    const title = card.querySelector("h2");
+    if (title) {
+      const box = title.getBoundingClientRect();
+      titleRight = (box.right - rect.left) / rect.width + 0.02;
+      titleTop = (box.top - rect.top) / rect.height - 0.02;
+    }
+    const key = [rect.width, rect.height, nextDpr, titleRight, titleTop].join();
+    if (key === builtFor) return;
+    builtFor = key;
+    dpr = nextDpr;
     unit = dpr * Math.min(1, Math.max(0.6, rect.height / 760));
     width = Math.round(rect.width * BLEED * dpr);
     height = Math.round(rect.height * BLEED * dpr);
@@ -408,13 +429,7 @@
     canvas.height = height;
     const fw = rect.width * dpr;
     const fh = rect.height * dpr;
-    frame = { x: (width - fw) / 2, y: (height - fh) / 2, w: fw, h: fh, titleRight: 0.44, titleTop: 0.86 };
-    const title = card.querySelector("h2");
-    if (title) {
-      const box = title.getBoundingClientRect();
-      frame.titleRight = (box.right - rect.left) / rect.width + 0.02;
-      frame.titleTop = (box.top - rect.top) / rect.height - 0.02;
-    }
+    frame = { x: (width - fw) / 2, y: (height - fh) / 2, w: fw, h: fh, titleRight, titleTop };
     rocket = rocketGeometry();
     billows = buildBillows(mulberry(7));
     stars = renderStars(mulberry(11));

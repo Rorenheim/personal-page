@@ -162,9 +162,8 @@
 
   // Any non-"." cell is a dot. `parts` maps a cell character to the class of the
   // group it joins, so the motion code can find and redraw that part.
-  function mark(x, y, width, radius = DOT) {
-    const p = width > 1 ? x / (width - 1) : 0;
-    return `<circle class="mark" style="--p:${p.toFixed(3)}" cx="${x + 0.5}" cy="${y + 0.5}" r="${radius.toFixed(3)}"/>`;
+  function mark(x, y, radius = DOT) {
+    return `<circle class="mark" cx="${x + 0.5}" cy="${y + 0.5}" r="${radius.toFixed(3)}"/>`;
   }
 
   // `extra` is raw SVG appended inside the figure, for parts drawn outside the grid.
@@ -175,7 +174,7 @@
     rows.forEach((row, y) => {
       [...row].forEach((cell, x) => {
         if (cell === ".") return;
-        groups.set(cell, (groups.get(cell) || "") + mark(x, y, width));
+        groups.set(cell, (groups.get(cell) || "") + mark(x, y));
       });
     });
     let body = "";
@@ -256,7 +255,8 @@
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
-    layers.forEach(({ cells }, index) => {
+    layers.forEach(({ cells, group }, index) => {
+      group.classList.add("is-moving");
       cells.forEach(([x, y]) => {
         lookup.set(key(x, y), index);
         minX = Math.min(minX, x);
@@ -268,19 +268,42 @@
     return { layers, lookup, bounds: [minX, minY, maxX, maxY], pivot, mask, mode, drawn: [] };
   }
 
+  const SVG = "http://www.w3.org/2000/svg";
+
+  function setAttr(el, name, value) {
+    if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  }
+
+  // Each layer is a flat list of [col, row, radius] triples. Existing dots are
+  // reused and spare ones collapse to r=0, so posing a part creates no new nodes.
   function commit(target, out) {
-    out.forEach((html, index) => {
-      if (target.drawn[index] === html) return;
-      target.drawn[index] = html;
-      target.layers[index].group.innerHTML = html;
+    out.forEach((dots, index) => {
+      const previous = target.drawn[index];
+      if (previous && previous.length === dots.length && previous.every((value, i) => value === dots[i])) return;
+      target.drawn[index] = dots;
+      const group = target.layers[index].group;
+      const circles = group.children;
+      let n = 0;
+      for (let i = 0; i < dots.length; i += 3, n += 1) {
+        let circle = circles[n];
+        if (!circle) {
+          circle = document.createElementNS(SVG, "circle");
+          circle.setAttribute("class", "mark");
+          group.appendChild(circle);
+        }
+        setAttr(circle, "cx", String(dots[i] + 0.5));
+        setAttr(circle, "cy", String(dots[i + 1] + 0.5));
+        setAttr(circle, "r", dots[i + 2].toFixed(3));
+      }
+      for (; n < circles.length; n += 1) setAttr(circles[n], "r", "0");
     });
   }
 
-  function trace(target, width, cos, sin, scaleX, scaleY, tx, ty) {
+  function trace(target, cos, sin, scaleX, scaleY, tx, ty) {
     const { layers, pivot: [px, py], mask } = target;
     const taken = new Set();
     const out = layers.map(({ cells }) => {
-      let html = "";
+      const dots = [];
       cells.forEach(([x, y]) => {
         const dx = (x + 0.5 - px) * scaleX;
         const dy = (y + 0.5 - py) * scaleY;
@@ -289,9 +312,9 @@
         const cell = key(col, row);
         if (taken.has(cell) || (mask && !mask(col + 0.5, row + 0.5))) return;
         taken.add(cell);
-        html += mark(col, row, width);
+        dots.push(col, row, DOT);
       });
-      return html;
+      return dots;
     });
     commit(target, out);
   }
@@ -303,7 +326,7 @@
     }));
   }
 
-  function render(target, width, { angle = 0, tx = 0, ty = 0, sx = 1, sy = 1 } = {}) {
+  function render(target, { angle = 0, tx = 0, ty = 0, sx = 1, sy = 1 } = {}) {
     const { layers, lookup, bounds, pivot, mask, mode } = target;
     const [px, py] = pivot;
     const cos = Math.cos(angle);
@@ -311,7 +334,7 @@
     const scaleX = Math.abs(sx) < 0.02 ? 0.02 : sx;
     const scaleY = Math.abs(sy) < 0.02 ? 0.02 : sy;
     if (mode === "trace") {
-      trace(target, width, cos, sin, scaleX, scaleY, tx, ty);
+      trace(target, cos, sin, scaleX, scaleY, tx, ty);
       return;
     }
     const floor = mode === "solid" ? 0.5 : 0.15;
@@ -329,7 +352,7 @@
       x1 = Math.max(x1, fx);
       y1 = Math.max(y1, fy);
     });
-    const out = layers.map(() => "");
+    const out = layers.map(() => []);
     const hits = new Array(layers.length);
     for (let row = Math.floor(y0); row < Math.ceil(y1); row += 1) {
       for (let col = Math.floor(x0); col < Math.ceil(x1); col += 1) {
@@ -355,7 +378,7 @@
         let best = 0;
         for (let i = 1; i < hits.length; i += 1) if (hits[i] > hits[best]) best = i;
         const radius = mode === "solid" ? DOT : DOT * Math.sqrt(Math.min(1, cover / 0.8));
-        out[best] += mark(col, row, width, radius);
+        out[best].push(col, row, radius);
       }
     }
     commit(target, out);
@@ -375,14 +398,16 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const touchMotion = window.matchMedia("(hover: none), (pointer: coarse)");
   const fineHover = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const mobileLayout = window.matchMedia("(max-width: 900px)");
 
-  // Tiles stay still on touch devices. Only desktop hover/focus starts motion.
+  // Tiles stay still on touch devices and in the mobile layout. Only desktop hover/focus starts motion.
   const tileWatchers = new Map();
 
   window.watchTileMotion = (trigger, callbacks) => {
     if (!trigger || reducedMotion || touchMotion.matches) return;
     let active = false;
     const setActive = (next, event) => {
+      if (next && mobileLayout.matches) return;
       if (active === next) return;
       active = next;
       trigger.classList.toggle("is-motion-active", active);
@@ -413,14 +438,14 @@
     tileWatchers.forEach((watcher) => watcher.setActive(false));
   }
   touchMotion.addEventListener("change", refreshTileObservers);
+  mobileLayout.addEventListener("change", refreshTileObservers);
   document.addEventListener("visibilitychange", refreshTileObservers);
 
   // Runs a glyph's springs while it is hovered or still settling. `state.nx` and
   // `state.ny` are the pointer's offset from the glyph's center, from -1 to 1.
   function drive(host, trigger, motion) {
-    const width = host.querySelector("svg").viewBox.baseVal.width;
     const state = { hovering: false, nx: 0, ny: 0, time: 0 };
-    const draw = () => motion.draw(state, width);
+    const draw = () => motion.draw(state);
     draw();
     if (reducedMotion || !trigger) return;
     let frameId = 0;
@@ -502,7 +527,7 @@
         springs: [angle],
         enter(state) { angle.velocity += (state.nx < 0 ? -1 : 1) * 6; },
         aim(state) { angle.target = state.hovering ? state.nx * 0.35 : 0; },
-        draw(state, width) { render(needle, width, { angle: angle.value }); },
+        draw(state) { render(needle, { angle: angle.value }); },
       };
     },
 
@@ -516,7 +541,7 @@
         aim(state) {
           angle.target = state.hovering ? Math.sin(state.time * 9) * 0.2 + state.nx * 0.1 : 0;
         },
-        draw(state, width) { render(hand, width, { angle: angle.value }); },
+        draw(state) { render(hand, { angle: angle.value }); },
       };
     },
 
@@ -532,7 +557,7 @@
           angle.target = state.hovering ? -0.07 - 0.05 * (state.nx + 1) / 2 : 0;
           lift.target = state.hovering ? -1 : 0;
         },
-        draw(state, width) { render(lid, width, { angle: angle.value, ty: lift.value }); },
+        draw(state) { render(lid, { angle: angle.value, ty: lift.value }); },
       };
     },
 
@@ -547,15 +572,15 @@
         springs: [slide],
         enter() { slide.velocity -= 12; },
         aim(state) { slide.target = state.hovering ? -18 * (1 - (state.nx + 1) / 2) : 0; },
-        draw(state, width) {
+        draw(state) {
           const tx = slide.value;
           tipX = 18 + tx;
-          render(pencil, width, {
+          render(pencil, {
             tx,
             ty: strokeHeight(tx),
             angle: clamp(-slide.velocity * 0.008, -0.18, 0.18),
           });
-          render(ink, width);
+          render(ink);
         },
       };
     },
@@ -582,7 +607,7 @@
           pull.target = state.hovering ? -BOOKMARK.rise : 0;
           tilt.target = state.hovering ? state.nx * 0.15 : 0;
         },
-        draw(state, width) { render(ribbon, width, { ty: pull.value, angle: tilt.value }); },
+        draw(state) { render(ribbon, { ty: pull.value, angle: tilt.value }); },
       };
     },
 
@@ -595,6 +620,7 @@
       const march = spring(30, 6.5);
       let beat = 0;
       let stride = 0;
+      let shown = 0;
       return {
         springs: [march],
         enter(state) { beat = state.time; },
@@ -604,10 +630,13 @@
           if (state.hovering || stride !== 0) stride = next;
         },
         busy() { return stride !== 0; },
-        draw(state, width) {
-          legA.style.opacity = stride ? "0" : "";
-          legB.style.opacity = stride ? "1" : "";
-          render(body, width, { tx: march.value });
+        draw(state) {
+          if (stride !== shown) {
+            shown = stride;
+            legA.style.opacity = stride ? "0" : "";
+            legB.style.opacity = stride ? "1" : "";
+          }
+          render(body, { tx: march.value });
         },
       };
     },
@@ -620,9 +649,9 @@
         springs: [hop],
         enter() { hop.velocity -= 16; },
         aim() { hop.target = 0; },
-        draw(state, width) {
+        draw(state) {
           const stretch = 1 + clamp(Math.abs(hop.velocity) * 0.02, 0, 0.3);
-          render(tittle, width, { ty: hop.value, sx: 1 / stretch, sy: stretch });
+          render(tittle, { ty: hop.value, sx: 1 / stretch, sy: stretch });
         },
       };
     },
@@ -634,7 +663,7 @@
       return {
         springs: [angle],
         aim(state) { angle.target = state.hovering ? Math.sin(state.time * 13) * 0.25 : 0; },
-        draw(state, width) { render(tail, width, { angle: angle.value }); },
+        draw(state) { render(tail, { angle: angle.value }); },
       };
     },
 
@@ -645,7 +674,7 @@
       return {
         springs: [fold],
         aim(state) { fold.target = state.hovering ? -1 : 1; },
-        draw(state, width) { render(flap, width, { sy: fold.value }); },
+        draw(state) { render(flap, { sy: fold.value }); },
       };
     },
   };
@@ -667,8 +696,8 @@
   function paint(el, text) {
     const rim = el.querySelector(".ink-rim");
     const face = el.querySelector(".ink-face");
-    if (rim) rim.textContent = text;
-    if (face) face.textContent = text;
+    if (rim && rim.textContent !== text) rim.textContent = text;
+    if (face && face.textContent !== text) face.textContent = text;
   }
 
   function tick() {

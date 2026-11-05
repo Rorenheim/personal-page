@@ -15,6 +15,9 @@ MEDIA_SUFFIXES = {
     ".mp4", ".webm", ".mov", ".mp3", ".ogg", ".wav", ".pdf",
     ".woff", ".woff2", ".ttf",
 }
+# Browsers and crawlers request these by fixed URLs, so they keep their names.
+ROOT_FILES = ("robots.txt", "sitemap.xml", "llms.txt", "favicon.ico", "site.webmanifest")
+FIXED_DIRECTORIES = ("icons",)
 
 
 def build(root=ROOT, output=OUTPUT):
@@ -43,6 +46,7 @@ def build(root=ROOT, output=OUTPUT):
     media.extend(
         path for path in sorted(root.iterdir())
         if path.is_file() and path.suffix.lower() in MEDIA_SUFFIXES
+        and path.name not in ROOT_FILES
         and (path.name in source_text or quote(path.name) in source_text)
     )
 
@@ -74,6 +78,16 @@ def build(root=ROOT, output=OUTPUT):
         if pattern:
             text = pattern.sub(lambda match: replacements[match.group()], text)
         target.write_text(text)
+    fixed = [root / name for name in ROOT_FILES]
+    for directory in FIXED_DIRECTORIES:
+        fixed.extend(sorted((root / directory).rglob("*")))
+    for path in fixed:
+        if path.is_symlink():
+            raise ValueError("Refusing to publish symbolic links")
+        if path.is_file():
+            target = output / path.relative_to(root)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, target)
     print(f"Built {len(text_files)} site files and {len(media)} versioned media files in {output}")
     return replacements
 

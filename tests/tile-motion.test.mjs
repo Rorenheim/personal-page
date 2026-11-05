@@ -9,7 +9,7 @@ const helpers = source.slice(
   source.indexOf("  // Runs a glyph's springs"),
 );
 
-function setup({ touch = false, reduced = false } = {}) {
+function setup({ touch = false, reduced = false, narrow = false } = {}) {
   const handlers = {};
   let intersection;
   let active = false;
@@ -24,7 +24,9 @@ function setup({ touch = false, reduced = false } = {}) {
     IntersectionObserver: Observer,
     matchMedia(query) {
       return {
-        matches: query.includes("reduced") ? reduced : query.includes("none") ? touch : !touch,
+        matches: query.includes("reduced") ? reduced
+          : query.includes("max-width") ? narrow
+          : query.includes("none") ? touch : !touch,
         addEventListener() {},
       };
     },
@@ -59,15 +61,38 @@ test("desktop mouse hover starts and stops the existing animation", () => {
   assert.deepEqual(tile.state, { active: false, enters: 1, leaves: 1 });
 });
 
-test("touch devices register no hover, focus, or scroll animation triggers", () => {
-  const tile = setup({ touch: true });
-  assert.deepEqual(Object.keys(tile.handlers), []);
+test("desktop does not animate tiles just because they are on screen", () => {
+  const tile = setup();
+  tile.intersect(true);
   assert.deepEqual(tile.state, { active: false, enters: 0, leaves: 0 });
+});
+
+test("mobile layout ignores hover and plays a tile while it is on screen", () => {
+  const tile = setup({ narrow: true });
+  tile.handlers.pointerenter({ pointerType: "mouse" });
+  assert.deepEqual(tile.state, { active: false, enters: 0, leaves: 0 });
+  tile.intersect(true);
+  assert.deepEqual(tile.state, { active: true, enters: 1, leaves: 0 });
+  tile.intersect(false);
+  assert.deepEqual(tile.state, { active: false, enters: 1, leaves: 1 });
+});
+
+test("touch devices play a tile while it is on screen and stop when it leaves", () => {
+  const tile = setup({ touch: true });
+  tile.handlers.pointerenter({ pointerType: "touch" });
+  assert.deepEqual(tile.state, { active: false, enters: 0, leaves: 0 }, "Touches never start motion");
+  tile.intersect(true);
+  assert.deepEqual(tile.state, { active: true, enters: 1, leaves: 0 });
+  tile.handlers.pointerleave({ pointerType: "touch" });
+  assert.equal(tile.state.active, true, "Lifting a finger does not stop a visible tile");
+  tile.intersect(false);
+  assert.deepEqual(tile.state, { active: false, enters: 1, leaves: 1 });
   assert.equal(tile.handlers.click, undefined, "Navigation is never intercepted");
 });
 
 test("reduced motion does not register animation triggers", () => {
   const tile = setup({ touch: true, reduced: true });
   assert.deepEqual(Object.keys(tile.handlers), []);
+  tile.intersect(true);
   assert.equal(tile.state.active, false);
 });

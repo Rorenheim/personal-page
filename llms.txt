@@ -1,0 +1,30 @@
+# Paul Kalaba
+
+> Paul Kalaba is a product manager with ten years in fintech and tech, focused on growth, pricing, and monetization. He works in product at Qonto on monetization, pricing, and upsell. He has built products from zero and helped grow them into multi-million-euro businesses.
+
+## Career
+
+- 2025 to now, Qonto: monetization, pricing, and upsell.
+- 2022 to 2025, Embea, Head of Product: an embeddable, AI-enabled insurance platform. AI pricing and discounts lifted revenue 65% year over year, with 30+ partners selling through it. Partner onboarding cut from two weeks to two days. €6,000 customer lifetime value against €210 acquisition cost, 87% retention.
+- 2020 to 2022, VTB Bank, Group Product Manager: a new business banking app rated 4.7 in the stores, with 73% monthly active users; the user base grew from 72K to 272K. Paperless account opening, and an in-app marketplace that lifted monthly recurring revenue by 25%.
+- 2018 to 2020, Beeline, Senior Product Manager, AdTech: Beeline.Promotion, an adtech platform for SMS, email, and web campaigns. Average order value 25% above competitors, 80% retention through bundles, campaign launch costs down 70%.
+- 2017 to 2019, Pay-Z, Chief Product Officer: a cashierless shop app for a pre-seed startup. 65% install-to-purchase conversion; concept to exit in two years.
+- 2016 to 2018, Artis, Product Manager: online store for a furniture maker with 100+ shops. Sales up 20% year over year, order value up 15% from recommendations, repeat purchases up 10% from a loyalty programme.
+
+## Expertise
+
+Product management, pricing strategy, monetization, upsell and MRR growth, product leadership, fintech, business banking, embedded insurance, adtech, AI-enabled products.
+
+## Pages
+
+- [About](https://kalaba.me/about.html): who Paul is and how he leads product teams.
+- [Work](https://kalaba.me/work.html): full work history and results.
+- [Guiding principles](https://kalaba.me/principles.html): the product principles and non-negotiables he works by, including "Price is part of the product."
+- [Blog](https://kalaba.me/blog.html): posts on product management, pricing, and building things.
+- [Book recommendations](https://kalaba.me/books.html): books on leadership, strategy, technology, and how to think.
+
+## Contact
+
+- Email: paul@kalaba.me
+- LinkedIn: https://www.linkedin.com/in/kalaba
+- GitHub: https://github.com/Rorenheim

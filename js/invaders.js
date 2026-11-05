@@ -189,6 +189,20 @@
   function revert() {
     mode = "idle";
     root.classList.remove("is-on");
+    release();
+  }
+
+  // The canvas is hidden while idle, so it holds no pixel memory until Play.
+  function release() {
+    canvas.width = 0;
+    canvas.height = 0;
+    width = 0;
+    height = 0;
+    pixelRatio = 0;
+  }
+
+  function resizeWhilePlaying() {
+    if (mode !== "idle") resize();
   }
 
   function tickBursts(dt) {
@@ -500,7 +514,8 @@
     }).observe(root);
   }
 
-  new ResizeObserver(resize).observe(root);
+  release();
+  new ResizeObserver(resizeWhilePlaying).observe(root);
   window.__invaders = {
     state: () => ({
       mode,
