@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="theme-dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,7 +17,7 @@
   <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest">
-  <meta name="theme-color" content="#e7e7e7">
+  <meta name="theme-color" content="#181818">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,600&family=Inter:wght@500&family=Space+Grotesk:wght@500&display=swap" rel="stylesheet">
@@ -35,59 +35,63 @@
     </header>
 
     <!--
-      One slide per project. Each slide picks its own grid with data-layout (a to e).
+      One slide per project. Each slide picks its own grid with data-layout (a to e, screens for four phone screenshots, docs for a logo and three wide screenshots, pair for two phone screenshots, trio for three wide images, or quad for a 2 × 2 of text and three wide images).
       To swap a placeholder for a real image, put <img src="..." alt="..."> inside the figure
       and remove the figcaption.
     -->
     <section class="carousel" data-carousel aria-roledescription="carousel" aria-label="Personal projects">
       <div class="carousel-viewport">
         <div class="carousel-track">
-          <article class="slide" id="casseo" data-layout="a" aria-roledescription="slide" aria-label="Casseo, 1 of 5">
-            <figure class="tile t-img t-i1" style="--t:0"><figcaption>Image placeholder</figcaption></figure>
-            <div class="tile t-name" style="--t:1"><h2>Casseo</h2></div>
-            <figure class="tile t-img t-i2 is-deep" style="--t:2"><figcaption>Image placeholder</figcaption></figure>
-            <div class="tile t-desc" style="--t:3">
-              <p>Placeholder description. What Casseo is, who it is for, and the problem it solves.</p>
+          <article class="slide" id="casseo" data-layout="screens" aria-roledescription="slide" aria-label="Casseo, 1 of 5">
+            <div class="tile t-name" style="--t:0"><h2>Casseo</h2></div>
+            <div class="tile t-desc" style="--t:1">
+              <p>A forever-free offline audio player. Smart categories sort your music by how you listen, and the whole player is yours to customize.</p>
+              <a class="t-status t-link" href="https://play.google.com/store/apps/details?id=com.casseo.myapp" rel="noreferrer">Free on Google Play<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 14 14 6M7 6h7v7"/></svg></a>
             </div>
+            <figure class="tile t-shot t-phone" style="--t:2"><img src="assets/projects/casseo1-640.jpg" srcset="assets/projects/casseo1-640.jpg 640w, assets/projects/casseo1.jpg 1152w" sizes="(max-width: 900px) calc(50vw - 24px), 260px" width="640" height="1310" decoding="async" alt="Casseo home screen: search, a Shuffle button for 1931 tracks, History and Favorites, and the most played albums."></figure>
+            <figure class="tile t-shot t-phone" style="--t:3"><img src="assets/projects/casseo2-640.jpg" srcset="assets/projects/casseo2-640.jpg 640w, assets/projects/casseo2.jpg 1152w" sizes="(max-width: 900px) calc(50vw - 24px), 260px" width="640" height="1314" decoding="async" alt="Casseo Lists screen: playlists as round dot-art covers, with a red button to create a new list."></figure>
+            <figure class="tile t-shot t-phone" style="--t:4"><img src="assets/projects/casseo3-640.jpg" srcset="assets/projects/casseo3-640.jpg 640w, assets/projects/casseo3.jpg 1152w" sizes="(max-width: 900px) calc(50vw - 24px), 260px" width="640" height="1330" decoding="async" alt="Never listened, a smart category of 30 tracks with Play and Shuffle buttons."></figure>
+            <figure class="tile t-shot t-phone" style="--t:5"><img src="assets/projects/casseo4-640.jpg" srcset="assets/projects/casseo4-640.jpg 640w, assets/projects/casseo4.jpg 1152w" sizes="(max-width: 900px) calc(50vw - 24px), 260px" width="640" height="1317" decoding="async" alt="Casseo now playing screen with album art, a progress bar, and playback controls."></figure>
           </article>
 
-          <article class="slide" id="doc2html" data-layout="b" aria-roledescription="slide" aria-label="doc2html, 2 of 5">
-            <figure class="tile t-img t-i1 is-deep" style="--t:0"><figcaption>Image placeholder</figcaption></figure>
-            <div class="tile t-name" style="--t:1"><h2>doc2html</h2></div>
-            <figure class="tile t-img t-i2" style="--t:2"><figcaption>Image placeholder</figcaption></figure>
-            <div class="tile t-desc" style="--t:3">
-              <p>Placeholder description. What doc2html does and why it exists.</p>
-              <span class="t-status">Status placeholder</span>
-            </div>
-          </article>
-
-          <article class="slide" id="doch" data-layout="c" aria-roledescription="slide" aria-label="DOCH app, 3 of 5">
-            <div class="tile t-desc" style="--t:0">
-              <p>Placeholder description. What the DOCH app is, who uses it, and what makes it different. A taller tile leaves room for a few more lines about how it came to be.</p>
-              <span class="t-status">Status placeholder</span>
-            </div>
-            <figure class="tile t-img t-i1" style="--t:1"><figcaption>Image placeholder</figcaption></figure>
-            <div class="tile t-name" style="--t:2"><h2>DOCH app</h2></div>
-            <figure class="tile t-img t-i2 is-deep" style="--t:3"><figcaption>Image placeholder</figcaption></figure>
-          </article>
-
-          <article class="slide" id="portfolio-optimizer" data-layout="d" aria-roledescription="slide" aria-label="Portfolio optimizer, 4 of 5">
-            <figure class="tile t-img t-i1 is-deep" style="--t:0"><figcaption>Image placeholder</figcaption></figure>
-            <div class="tile t-name" style="--t:1"><h2>Portfolio optimizer</h2></div>
+          <article class="slide" id="dynodocy" data-layout="docs" aria-roledescription="slide" aria-label="//dynodocy, 2 of 5">
+            <div class="tile t-name" style="--t:0"><h2>//dynodocy</h2></div>
+            <figure class="tile t-shot t-logo" style="--t:1"><img src="assets/projects/dynodocy_logo.jpg" width="1024" height="1024" decoding="async" alt="The //dynodocy logo: a black page with a red folded corner and a portrait in profile."></figure>
             <div class="tile t-desc" style="--t:2">
-              <p>Placeholder description. What the Portfolio optimizer does and who it helps.</p>
-              <span class="t-status">Status placeholder</span>
+              <p>Dynamic documents were a pain in the back, and no SaaS could fix that for me. With //dynodocy, you can upload a DOCX directly and get clean HTML in a second, ready to print to PDF. Pagination, tables, headers, and every other feature carry over automatically. Add your variables, and your dynamic template is ready.</p>
             </div>
-            <figure class="tile t-img t-i2" style="--t:3"><figcaption>Image placeholder</figcaption></figure>
+            <figure class="tile t-shot t-wide t-main" style="--t:3"><img src="assets/projects/dynodocy_3-1280.jpg" srcset="assets/projects/dynodocy_3-1280.jpg 1280w, assets/projects/dynodocy_3.jpg 2560w" sizes="(max-width: 900px) calc(145vw - 46px), 1080px" width="1280" height="729" decoding="async" alt="The exported HTML file, with page size, margins, and print rules written as plain CSS."></figure>
+            <figure class="tile t-shot t-wide" style="--t:4"><img src="assets/projects/dynodocy_1-1280.jpg" srcset="assets/projects/dynodocy_1-1280.jpg 1280w, assets/projects/dynodocy_1.jpg 2560w" sizes="(max-width: 900px) calc(100vw - 32px), 460px" width="1280" height="716" decoding="async" alt="The //dynodocy editor: a formatting toolbar above a paginated patent description template."></figure>
+            <figure class="tile t-shot t-wide" style="--t:5"><img src="assets/projects/dynodocy_2-1280.jpg" srcset="assets/projects/dynodocy_2-1280.jpg 1280w, assets/projects/dynodocy_2.jpg 2560w" sizes="(max-width: 900px) calc(100vw - 32px), 460px" width="1280" height="709" decoding="async" alt="Page setup in //dynodocy: header and footer, page numbers, document fonts, and how images are exported."></figure>
           </article>
 
-          <article class="slide" id="kalabot" data-layout="e" aria-roledescription="slide" aria-label="Kalabot, 5 of 5">
-            <figure class="tile t-img t-i2 is-deep" style="--t:0"><figcaption>Image placeholder</figcaption></figure>
-            <figure class="tile t-img t-i1" style="--t:1"><figcaption>Image placeholder</figcaption></figure>
-            <div class="tile t-name" style="--t:2"><h2>Kalabot</h2></div>
-            <div class="tile t-desc" style="--t:3">
-              <p>Placeholder description. What Kalabot is and what it can do for you.</p>
+          <article class="slide" id="doch" data-layout="pair" aria-roledescription="slide" aria-label="DOCH app, 3 of 5">
+            <div class="tile t-name" style="--t:0"><h2>DOCH app</h2></div>
+            <div class="tile t-desc" style="--t:1">
+              <p>Frankfurt is a small town, and it can get a bit boring. I lead a community of 600+ foreigners here, so I built DOCH: a calendar of every event worth going to and a guide to the places we recommend, all in one app.</p>
             </div>
+            <figure class="tile t-shot t-phone" style="--t:2"><img src="assets/projects/Doch1.jpg" width="832" height="1620" decoding="async" alt="The DOCH calendar for September 2025, with event days highlighted and the 29th selected."></figure>
+            <figure class="tile t-shot t-phone" style="--t:3"><img src="assets/projects/Doch2.jpg" width="844" height="1618" decoding="async" alt="A DOCH place card for KIKI LUCKY, a matcha spot in Frankfurt, with its address and an Open in Maps button."></figure>
+          </article>
+
+          <article class="slide" id="portfolio-optimizer" data-layout="quad" aria-roledescription="slide" aria-label="Portfolio optimizer, 4 of 5">
+            <div class="tile t-name" style="--t:0"><h2>Portfolio optimizer</h2></div>
+            <div class="tile t-desc" style="--t:1">
+              <p>An open-source portfolio optimizer. Pick a method (Markowitz, Max Sharpe, or Black-Litterman), then rebalance and backtest the result.</p>
+            </div>
+            <figure class="tile t-shot t-wide" style="--t:2; --ratio: 1024 / 650"><img src="assets/projects/portfolio1.jpg" width="1024" height="650" decoding="async" alt="The Assets step: a filtered universe of stocks and ETFs with prices and dividend yields, beside sliders for capital, risk tolerance, portfolio size, and weight limits."></figure>
+            <figure class="tile t-shot t-wide" style="--t:3; --ratio: 1024 / 630"><img src="assets/projects/portfolio2.jpg" width="1024" height="630" decoding="async" alt="The Optimize step: Sharpe ratio, pure return, minimum volatility, and Black-Litterman side by side, each with expected return, volatility, and weights."></figure>
+            <figure class="tile t-shot t-wide" style="--t:4; --ratio: 1024 / 524"><img src="assets/projects/portfolio3.jpg" width="1024" height="524" decoding="async" alt="The Backtest step: $50,000 grows to $148,920 from 2014 to 2024, an 11.2% CAGR, with holdings and rebalancing costs."></figure>
+          </article>
+
+          <article class="slide" id="kalabot" data-layout="trio" aria-roledescription="slide" aria-label="Kalabot, 5 of 5">
+            <div class="tile t-name" style="--t:0"><h2>Kalabot</h2></div>
+            <div class="tile t-desc" style="--t:1">
+              <p>Before I delegate anything to an AI version of me, it has to do the job right and stay out of the uncanny valley. Kalabot runs on Qwen with a behavioral layer that reads each situation (who’s asking, the hour, what’s already waiting) and replies the way I would.</p>
+            </div>
+            <figure class="tile t-shot t-wide t-main" style="--t:2"><img src="assets/projects/kalabot3.jpg" width="1024" height="576" decoding="async" alt="Kalabot’s behavioral layer: a message is read for who is asking, the hour, and what is waiting, then answered in a tired, busy, or open mode, drawing on memory, past episodes, and a library."></figure>
+            <figure class="tile t-shot t-wide t-zoom" style="--t:3; --zoom:1.6"><img src="assets/projects/kalabot2.jpg" width="1024" height="576" decoding="async" alt="A Slack thread in #checkout where Victor asks to QA checkout before the add-on upsell, and the Paul Kalaba clone replies that they should go ahead without waiting."></figure>
+            <figure class="tile t-shot t-wide t-zoom" style="--t:4; --zoom:1.1"><img src="assets/projects/kalabot1.jpg" width="1024" height="576" decoding="async" alt="Kalabot’s stack: FastAPI orchestrates; Qdrant, Qwen3 Embedding, and Qwen3 Reranker retrieve; a Qwen model with a QLoRA adapter served by vLLM writes; Langfuse observes."></figure>
           </article>
         </div>
       </div>
@@ -121,6 +125,7 @@
   <script type="module" src="js/drift.js"></script>
   <script src="js/menu.js"></script>
   <script src="js/carousel.js"></script>
+  <script src="js/lens.js"></script>
   <script src="js/widgets.js?v=7"></script>
   <script src="js/cursor.js"></script>
 </body>

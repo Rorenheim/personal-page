@@ -152,7 +152,7 @@ try {
     return {pixels: c.width*c.height, time: v.currentTime, frames: window.backgroundFrames, ink: document.documentElement.classList.contains("ink-live")};
   })()`);
   assert(background.pixels <= 264000, `Mobile background pixel budget: ${background.pixels}`);
-  assert.equal(background.ink, false, "Mobile should not encode animated text masks");
+  assert.equal(background.ink, true, "Mobile keeps the animated ink text");
   await sleep(400);
   assert(await evaluate(`document.querySelector("body > video").currentTime > ${background.time}`), "Background must keep playing");
   assert(await evaluate(`window.backgroundFrames > ${background.frames}`), "Background shader must keep rendering");

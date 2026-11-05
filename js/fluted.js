@@ -85,7 +85,6 @@ function placeInk() {
 }
 
 function updateInk(source, sourceWidth, sourceHeight) {
-  if (touchMotion.matches) return;
   if (!sourceWidth || !sourceHeight) return;
   if (!inkNearby.size) {
     inkStale = true;
@@ -195,40 +194,38 @@ function startInkWorker() {
 }
 
 resizeInk();
-if (!touchMotion.matches) {
-  startInkWorker();
-  window.addEventListener("resize", () => {
-    resizeInk();
+startInkWorker();
+window.addEventListener("resize", () => {
+  resizeInk();
+  placeInk();
+});
+let inkScrollFrame = 0;
+window.addEventListener("scroll", () => {
+  if (inkScrollFrame || !inkNearby.size) return;
+  inkScrollFrame = requestAnimationFrame(() => {
+    inkScrollFrame = 0;
     placeInk();
   });
-  let inkScrollFrame = 0;
-  window.addEventListener("scroll", () => {
-    if (inkScrollFrame || !inkNearby.size) return;
-    inkScrollFrame = requestAnimationFrame(() => {
-      inkScrollFrame = 0;
-      placeInk();
+}, { passive: true });
+document.fonts?.ready.then(() => { inkPositionsDirty = true; });
+// Footer text changes (the clock) only move ink text when some ink element resizes.
+if ("ResizeObserver" in window) {
+  const layoutWatch = new ResizeObserver(() => { inkPositionsDirty = true; });
+  layoutWatch.observe(document.body);
+  inkElements.forEach((el) => layoutWatch.observe(el));
+}
+if ("IntersectionObserver" in window) {
+  // The margin starts updates a viewport ahead so text never enters with a stale mask.
+  const nearby = new IntersectionObserver((entries) => {
+    entries.forEach(({ target, isIntersecting }) => {
+      if (isIntersecting) inkNearby.add(target);
+      else inkNearby.delete(target);
     });
-  }, { passive: true });
-  document.fonts?.ready.then(() => { inkPositionsDirty = true; });
-  // Footer text changes (the clock) only move ink text when some ink element resizes.
-  if ("ResizeObserver" in window) {
-    const layoutWatch = new ResizeObserver(() => { inkPositionsDirty = true; });
-    layoutWatch.observe(document.body);
-    inkElements.forEach((el) => layoutWatch.observe(el));
-  }
-  if ("IntersectionObserver" in window) {
-    // The margin starts updates a viewport ahead so text never enters with a stale mask.
-    const nearby = new IntersectionObserver((entries) => {
-      entries.forEach(({ target, isIntersecting }) => {
-        if (isIntersecting) inkNearby.add(target);
-        else inkNearby.delete(target);
-      });
-      if (!inkNearby.size) return;
-      placeInk();
-      if (inkStale && video.readyState >= 2) updateInk(video, video.videoWidth, video.videoHeight);
-    }, { rootMargin: "100% 0px" });
-    inkElements.forEach((el) => nearby.observe(el));
-  }
+    if (!inkNearby.size) return;
+    placeInk();
+    if (inkStale && video.readyState >= 2) updateInk(video, video.videoWidth, video.videoHeight);
+  }, { rootMargin: "100% 0px" });
+  inkElements.forEach((el) => nearby.observe(el));
 }
 
 const poster = new Image();
@@ -259,6 +256,7 @@ function whenVideo() {
 function boot() {
   const glass = mountGlass(host, seed);
   let lastPaint = -Infinity;
+  let lastInk = -Infinity;
   const mobileFrame = touchMotion.matches ? document.createElement("canvas") : null;
   const mobileContext = mobileFrame?.getContext("2d", { alpha: false });
 
@@ -279,6 +277,10 @@ function boot() {
       glass.draw(mobileFrame, width, height);
     } else {
       glass.draw(video, video.videoWidth, video.videoHeight);
+    }
+    // Touch devices refresh the ink at 15 fps, as the original site did.
+    if (!touchMotion.matches || now - lastInk >= 1000 / 15 - 1) {
+      lastInk = now;
       updateInk(video, video.videoWidth, video.videoHeight);
     }
   };
